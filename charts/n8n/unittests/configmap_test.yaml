@@ -81,10 +81,8 @@ tests:
         type: postgresdb
       postgresql:
         enabled: true
-        primary:
-          service:
-            ports:
-              postgresql: 9876
+        service:
+          port: 9876
     documentSelector:
       path: metadata.name
       value: n8n-database-configmap
@@ -606,7 +604,7 @@ tests:
           path: data.OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS
           value: "true"
 
-  - it: should set redis host redis-master and port when db type set to postgresdb and worker mode is queue and redis.enabled is true
+  - it: should set valkey service host and port when db type set to postgresdb and worker mode is queue and redis.enabled is true
     set:
       db:
         type: postgresdb
@@ -614,22 +612,20 @@ tests:
         mode: queue
       redis:
         enabled: true
-        master:
-          service:
-            ports:
-              redis: 6379
+        service:
+          port: 6379
     documentSelector:
       path: metadata.name
       value: n8n-queue-configmap
     asserts:
       - equal:
           path: data.QUEUE_BULL_REDIS_HOST
-          value: n8n-redis-master
+          value: n8n-redis
       - equal:
           path: data.QUEUE_BULL_REDIS_PORT
           value: "6379"
 
-  - it: should set redis host redis-master and port when db type set to postgresdb and webhook mode is queue and redis.enabled is true
+  - it: should set valkey service host and port when db type set to postgresdb and webhook mode is queue and redis.enabled is true
     set:
       db:
         type: postgresdb
@@ -637,17 +633,15 @@ tests:
         mode: queue
       redis:
         enabled: true
-        master:
-          service:
-            ports:
-              redis: 6379
+        service:
+          port: 6379
     documentSelector:
       path: metadata.name
       value: n8n-queue-configmap
     asserts:
       - equal:
           path: data.QUEUE_BULL_REDIS_HOST
-          value: n8n-redis-master
+          value: n8n-redis
       - equal:
           path: data.QUEUE_BULL_REDIS_PORT
           value: "6379"

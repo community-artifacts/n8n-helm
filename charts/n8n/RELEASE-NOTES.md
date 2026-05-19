@@ -4,6 +4,21 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
+## 3.0.0
+
+- **Breaking**: Replaced the Bitnami PostgreSQL and Redis subcharts. The chart now ships [`cloudpirates/postgres`](https://artifacthub.io/packages/helm/cloudpirates-postgres/postgres) `0.19.4` (PostgreSQL 18.3, StatefulSet, official `postgres` image) and [`valkey/valkey`](https://github.com/valkey-io/valkey-helm) `0.9.4` (Valkey 9.0.2, Redis-wire-compatible).
+- **Breaking**: Restructured `postgresql.*` values:
+  - `postgresql.primary.service.ports.postgresql` → `postgresql.service.port`
+  - `postgresql.primary.persistence.{enabled,existingClaim}` → `postgresql.persistence.{enabled,existingClaim}`
+  - Dropped `postgresql.architecture` and `postgresql.image.repository` Bitnami workaround.
+- **Breaking**: Restructured `redis.*` values:
+  - `redis.master.service.ports.redis` → `redis.service.port`
+  - In-cluster redis Service host loses the `-master` suffix (now `{release}-redis` instead of `{release}-redis-master`).
+  - `redis.auth.enabled` now defaults to `false`. Valkey uses ACL rather than single-password auth; to enable, set `redis.auth.aclUsers.default.password` (or `redis.auth.usersExistingSecret`) and mirror the value in `externalRedis.password`.
+  - Dropped `redis.architecture`, `redis.master.persistence`, and the `bitnamilegacy/redis` workaround.
+- **Fixed**: `n8n.postgresql.fullname` / `n8n.redis.fullname` helpers now match the subchart's actual rendered Service/Secret name in releases whose name does not contain `n8n` (previously the configmap referenced `{release}-n8n-postgresql` while the subchart created `{release}-postgresql`).
+- **Dependencies**: postgres `0.19.4` (alias `postgresql`), valkey `0.9.4` (alias `redis`), minio `5.4.0`.
+
 ## 2.0.0
 
 First release of the community-artifacts `n8n` Helm chart.

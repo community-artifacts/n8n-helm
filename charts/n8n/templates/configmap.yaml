@@ -14,8 +14,8 @@ data:
 {{- if eq .Values.db.type "postgresdb" }}
   DB_TYPE: {{ .Values.db.type | quote }}
   {{- if .Values.postgresql.enabled }}
-  DB_POSTGRESDB_HOST: {{ template "n8n.fullname" . }}-postgresql
-  DB_POSTGRESDB_PORT: {{ .Values.postgresql.primary.service.ports.postgresql | quote }}
+  DB_POSTGRESDB_HOST: {{ include "n8n.postgresql.fullname" . }}
+  DB_POSTGRESDB_PORT: {{ .Values.postgresql.service.port | quote }}
   DB_POSTGRESDB_DATABASE: {{ .Values.postgresql.auth.database | quote }}
   {{- else }}
   DB_POSTGRESDB_HOST: {{ .Values.externalPostgresql.host | quote }}
@@ -147,8 +147,8 @@ data:
   QUEUE_BULL_REDIS_DB: {{ .Values.externalRedis.database | quote }}
   OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS: "true"
   {{- if .Values.redis.enabled }}
-  QUEUE_BULL_REDIS_HOST: {{ template "n8n.fullname" . }}-redis-master
-  QUEUE_BULL_REDIS_PORT: {{ (default 6379 .Values.redis.master.service.ports.redis | int) | quote }}
+  QUEUE_BULL_REDIS_HOST: {{ include "n8n.redis.fullname" . }}
+  QUEUE_BULL_REDIS_PORT: {{ (default 6379 .Values.redis.service.port | int) | quote }}
   {{- else if and .Values.externalRedis.clusterNodes (gt (len .Values.externalRedis.clusterNodes) 0) }}
     {{- $nodeList := list }}
     {{- range .Values.externalRedis.clusterNodes }}

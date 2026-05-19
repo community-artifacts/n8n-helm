@@ -80,17 +80,25 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Create redis name secret name.
+Match the Valkey subchart's rendered Service/Secret name. The subchart's fullname template collapses to `.Release.Name` when the release name already contains the chart name; otherwise it prepends. The alias `redis` puts this helper in lock-step with the subchart's own helper.
 */}}
 {{- define "n8n.redis.fullname" -}}
-{{- printf "%s-redis" (include "n8n.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- if contains "redis" .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-redis" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
-Create postgresql name secret name.
+Match the cloudpirates/postgres subchart's rendered Service/Secret name (alias `postgresql`).
 */}}
 {{- define "n8n.postgresql.fullname" -}}
-{{- printf "%s-postgresql" (include "n8n.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- if contains "postgresql" .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-postgresql" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

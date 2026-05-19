@@ -1922,14 +1922,8 @@
     },
     "postgresql": {
       "additionalProperties": true,
-      "description": "Bitnami PostgreSQL configuration",
+      "description": "PostgreSQL configuration (cloudpirates/postgres subchart, aliased as postgresql)",
       "properties": {
-        "architecture": {
-          "default": "standalone",
-          "required": [],
-          "title": "architecture",
-          "type": "string"
-        },
         "auth": {
           "additionalProperties": true,
           "properties": {
@@ -1963,76 +1957,55 @@
         },
         "enabled": {
           "default": false,
-          "description": "Enable postgresql",
+          "description": "Enable PostgreSQL",
           "required": [],
           "title": "enabled",
           "type": "boolean"
         },
-        "primary": {
+        "persistence": {
           "additionalProperties": true,
           "properties": {
-            "persistence": {
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "default": true,
-                  "required": [],
-                  "title": "enabled",
-                  "type": "boolean"
-                },
-                "existingClaim": {
-                  "default": "",
-                  "required": [],
-                  "title": "existingClaim",
-                  "type": "string"
-                }
-              },
-              "required": [
-                "enabled",
-                "existingClaim"
-              ],
-              "title": "persistence",
-              "type": "object"
+            "enabled": {
+              "default": true,
+              "required": [],
+              "title": "enabled",
+              "type": "boolean"
             },
-            "service": {
-              "additionalProperties": true,
-              "properties": {
-                "ports": {
-                  "additionalProperties": true,
-                  "properties": {
-                    "postgresql": {
-                      "default": 5432,
-                      "required": [],
-                      "title": "postgresql",
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "postgresql"
-                  ],
-                  "title": "ports",
-                  "type": "object"
-                }
-              },
-              "required": [
-                "ports"
-              ],
-              "title": "service",
-              "type": "object"
+            "existingClaim": {
+              "default": "",
+              "required": [],
+              "title": "existingClaim",
+              "type": "string"
             }
           },
           "required": [
-            "service",
-            "persistence"
+            "enabled",
+            "existingClaim"
           ],
-          "title": "primary",
+          "title": "persistence",
+          "type": "object"
+        },
+        "service": {
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "default": 5432,
+              "required": [],
+              "title": "port",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "port"
+          ],
+          "title": "service",
           "type": "object"
         }
       },
       "required": [
         "enabled",
-        "architecture",
-        "primary",
+        "service",
+        "persistence",
         "auth"
       ],
       "title": "postgresql",
@@ -2072,52 +2045,35 @@
     },
     "redis": {
       "additionalProperties": true,
-      "description": "Bitnami Redis configuration",
+      "description": "Valkey configuration (valkey/valkey subchart, aliased as redis)",
       "properties": {
-        "architecture": {
-          "default": "standalone",
-          "required": [],
-          "title": "architecture",
-          "type": "string"
-        },
         "enabled": {
           "default": false,
-          "description": "Enable redis",
+          "description": "Enable Valkey",
           "required": [],
           "title": "enabled",
           "type": "boolean"
         },
-        "master": {
+        "service": {
           "additionalProperties": true,
           "properties": {
-            "persistence": {
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "default": false,
-                  "required": [],
-                  "title": "enabled",
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "enabled"
-              ],
-              "title": "persistence",
-              "type": "object"
+            "port": {
+              "default": 6379,
+              "required": [],
+              "title": "port",
+              "type": "integer"
             }
           },
           "required": [
-            "persistence"
+            "port"
           ],
-          "title": "master",
+          "title": "service",
           "type": "object"
         }
       },
       "required": [
         "enabled",
-        "architecture",
-        "master"
+        "service"
       ],
       "title": "redis",
       "type": "object"

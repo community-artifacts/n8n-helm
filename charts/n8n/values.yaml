@@ -1016,30 +1016,27 @@ dnsPolicy: ""
 # -- For more information checkout: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
 dnsConfig: {}
 
-# -- Bitnami Redis configuration
+# -- Valkey (Redis-wire-compatible) configuration. Subchart: valkey/valkey (https://valkey.io/valkey-helm), aliased as `redis` to keep n8n's redis-* value paths.
 redis:
-  # -- Enable redis
+  # -- Enable Valkey
   enabled: false
-  # -- Enable redis architecture.
-  architecture: standalone
 
+  # -- Valkey container image. Defaults to docker.io/valkey/valkey at the chart's pinned appVersion.
   image:
-    # -- This is temporary workaround because of bitnami's deprecation until to completely replace it with our solution.
-    repository: bitnamilegacy/redis
+    registry: docker.io
+    repository: valkey/valkey
 
-  # -- This is for setting up the auth.
+  # -- Authentication. Valkey uses ACL, not Redis' single-password model. Disabled by default; rely on cluster-internal isolation. To enable, set `auth.enabled: true`, declare `auth.aclUsers.default.password` (or `auth.usersExistingSecret`), and mirror the value in `externalRedis.password` so n8n can connect.
   auth:
-    # -- Enable password authentication
-    enabled: true
+    enabled: false
 
-  master:
-    service:
-      ports:
-        # -- Redis master service port
-        redis: 6379
+  # -- Service definition consumed by n8n's queue-mode config. Valkey exposes a single ClusterIP service named `{release}-redis`.
+  service:
+    port: 6379
 
-    persistence:
-      enabled: false
+  # -- Persistent storage for the Valkey pod. Disabled by default — n8n only uses Valkey as a Bull queue broker, so data is recoverable on restart.
+  dataStorage:
+    enabled: false
 
 # -- External Redis parameters
 externalRedis:
@@ -1069,41 +1066,31 @@ externalRedis:
   # -- Enable dual-stack support (IPv4 and IPv6) on Redis connections.
   dualStack: false
 
-# -- Bitnami PostgreSQL configuration
+# -- PostgreSQL configuration. Subchart: cloudpirates/postgres (oci://registry-1.docker.io/cloudpirates/postgres), aliased as `postgresql`. Renders a StatefulSet running the official postgres image at the chart's pinned appVersion.
 postgresql:
-  # -- Enable postgresql
+  # -- Enable PostgreSQL
   enabled: false
-  # -- Enable postgresql architecture.
-  architecture: standalone
 
+  # -- PostgreSQL container image. Defaults to docker.io/postgres at the chart's pinned appVersion.
   image:
-    # -- This is temporary workaround because of bitnami's deprecation until to completely replace it with our solution.
-    repository: bitnamilegacy/postgresql
+    registry: docker.io
+    repository: postgres
 
-  # -- This is for setting up the primary service.
-  primary:
-    # -- This is for setting up the primary service.
-    service:
-      # -- This is for setting up the service ports.
-      ports:
-        # -- This is for setting up the postgresql port.
-        postgresql: 5432
-
-    # -- This is for setting up the persistence.
-    persistence:
-      # -- This is for setting up the persistence enabled.
-      enabled: true
-      # -- This is for setting up the persistence existing claim.
-      existingClaim: ""
-
-  # -- This is for setting up the auth.
+  # -- Authentication. When `auth.password` is empty the subchart auto-generates a password and stores it under key `postgres-password` in the Secret named `{release}-postgresql`. When `auth.username` is set, the subchart creates a non-superuser of that name (with key `password`) — n8n consumes whichever key is present.
   auth:
-    # -- This is for setting up the auth username.
     username: ""
-    # -- This is for setting up the auth password.
     password: ""
     # -- The name of the PostgreSQL database. For more information: https://docs.n8n.io/hosting/configuration/supported-databases-settings/#required-permissions
     database: "n8n"
+
+  # -- ClusterIP service exposing PostgreSQL on the standard port.
+  service:
+    port: 5432
+
+  # -- Persistent storage for the StatefulSet's data volume.
+  persistence:
+    enabled: true
+    existingClaim: ""
 
 # -- External PostgreSQL parameters
 externalPostgresql:

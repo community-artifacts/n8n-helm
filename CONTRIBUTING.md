@@ -15,7 +15,7 @@ You need:
 
 - Helm `>= 3.14`
 - The [`helm-unittest`](https://github.com/helm-unittest/helm-unittest) plugin
-- Network access to pull the `bitnami` and `minio` subcharts on the first `helm dependency update`
+- Network access to pull the `cloudpirates/postgres` (OCI), `valkey`, and `minio` subcharts on the first `helm dependency update`
 
 ```bash
 helm plugin install https://github.com/helm-unittest/helm-unittest.git

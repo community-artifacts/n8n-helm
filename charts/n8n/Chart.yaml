@@ -7,7 +7,7 @@ description: |-
   (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage,
   multi-main, webhook processors, ServiceMonitor).
 type: application
-version: 2.0.0
+version: 3.0.0
 appVersion: 2.21.4
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/community-artifacts/n8n-helm
@@ -29,13 +29,15 @@ maintainers:
     url: https://github.com/community-artifacts
 dependencies:
   - condition: redis.enabled
-    name: redis
-    repository: https://charts.bitnami.com/bitnami
-    version: 25.5.3
+    name: valkey
+    alias: redis
+    repository: https://valkey.io/valkey-helm
+    version: 0.9.4
   - condition: postgresql.enabled
-    name: postgresql
-    repository: https://charts.bitnami.com/bitnami
-    version: 18.6.4
+    name: postgres
+    alias: postgresql
+    repository: oci://registry-1.docker.io/cloudpirates
+    version: 0.19.4
   - condition: minio.enabled
     name: minio
     repository: https://charts.min.io/

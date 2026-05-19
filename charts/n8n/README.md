@@ -122,7 +122,9 @@ ingress:
           pathType: ImplementationSpecific
 ```
 
-## Deployment with Bitnami's PostgreSQL
+## Deployment with the bundled PostgreSQL subchart
+
+The chart ships [`cloudpirates/postgres`](https://artifacthub.io/packages/helm/cloudpirates-postgres/postgres) (StatefulSet, official `postgres` image, currently PG 18). Enable and override only what you need.
 
 ```yaml
 db:
@@ -130,10 +132,9 @@ db:
 
 postgresql:
   enabled: true
- 
-  primary:
-    persistence:
-      existingClaim: "my-n8n-claim"
+
+  persistence:
+    existingClaim: "my-n8n-claim"
 ```
 
 ## Deployment with External PostgreSQL
@@ -163,7 +164,9 @@ externalPostgresql:
   existingSecret: "my-k8s-secret-contains-postgres-password-key-and-credential"
 ```
 
-## Queue Mode with Bitnami's Redis
+## Queue Mode with the bundled Valkey subchart
+
+The chart ships [`valkey/valkey`](https://github.com/valkey-io/valkey-helm) (Redis-wire-compatible, currently Valkey 9). Auth is disabled by default — rely on namespace/NetworkPolicy isolation, or enable Valkey ACL and mirror the password in `externalRedis.password`.
 
 > **Tip**: Queue mode doesn't work with default SQLite mode
 
@@ -891,8 +894,8 @@ Kubernetes: `>=1.23.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| https://charts.bitnami.com/bitnami | postgresql | 18.6.4 |
-| https://charts.bitnami.com/bitnami | redis | 25.5.3 |
+| oci://registry-1.docker.io/cloudpirates | postgres (alias: postgresql) | 0.19.4 |
+| https://valkey.io/valkey-helm | valkey (alias: redis) | 0.9.4 |
 | https://charts.min.io/ | minio | 5.4.0 |
 
 ## Uninstall Helm Chart
@@ -1108,29 +1111,20 @@ helm upgrade [RELEASE_NAME] community-artifacts/n8n-helm
 | podAnnotations | object | `{}` | This is for setting Kubernetes Annotations to a Pod. For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ |
 | podLabels | object | `{}` | This is for setting Kubernetes Labels to a Pod. For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |
 | podSecurityContext | object | `{"fsGroup":1000,"fsGroupChangePolicy":"OnRootMismatch"}` | This is for setting Security Context to a Pod. For more information checkout: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
-| postgresql | object | `{"architecture":"standalone","auth":{"database":"n8n","password":"","username":""},"enabled":false,"image":{"repository":"bitnamilegacy/postgresql"},"primary":{"persistence":{"enabled":true,"existingClaim":""},"service":{"ports":{"postgresql":5432}}}}` | Bitnami PostgreSQL configuration |
-| postgresql.architecture | string | `"standalone"` | Enable postgresql architecture. |
-| postgresql.auth | object | `{"database":"n8n","password":"","username":""}` | This is for setting up the auth. |
+| postgresql | object | `{"auth":{"database":"n8n","password":"","username":""},"enabled":false,"image":{"registry":"docker.io","repository":"postgres"},"persistence":{"enabled":true,"existingClaim":""},"service":{"port":5432}}` | PostgreSQL configuration. Subchart: cloudpirates/postgres (oci://registry-1.docker.io/cloudpirates/postgres), aliased as `postgresql`. Renders a StatefulSet running the official postgres image at the chart's pinned appVersion. |
+| postgresql.auth | object | `{"database":"n8n","password":"","username":""}` | Authentication. When `auth.password` is empty the subchart auto-generates a password and stores it under key `postgres-password` in the Secret named `{release}-postgresql`. When `auth.username` is set, the subchart creates a non-superuser of that name (with key `password`) — n8n consumes whichever key is present. |
 | postgresql.auth.database | string | `"n8n"` | The name of the PostgreSQL database. For more information: https://docs.n8n.io/hosting/configuration/supported-databases-settings/#required-permissions |
-| postgresql.auth.password | string | `""` | This is for setting up the auth password. |
-| postgresql.auth.username | string | `""` | This is for setting up the auth username. |
-| postgresql.enabled | bool | `false` | Enable postgresql |
-| postgresql.image.repository | string | `"bitnamilegacy/postgresql"` | This is temporary workaround because of bitnami's deprecation until to completely replace it with our solution. |
-| postgresql.primary | object | `{"persistence":{"enabled":true,"existingClaim":""},"service":{"ports":{"postgresql":5432}}}` | This is for setting up the primary service. |
-| postgresql.primary.persistence | object | `{"enabled":true,"existingClaim":""}` | This is for setting up the persistence. |
-| postgresql.primary.persistence.enabled | bool | `true` | This is for setting up the persistence enabled. |
-| postgresql.primary.persistence.existingClaim | string | `""` | This is for setting up the persistence existing claim. |
-| postgresql.primary.service | object | `{"ports":{"postgresql":5432}}` | This is for setting up the primary service. |
-| postgresql.primary.service.ports | object | `{"postgresql":5432}` | This is for setting up the service ports. |
-| postgresql.primary.service.ports.postgresql | int | `5432` | This is for setting up the postgresql port. |
+| postgresql.enabled | bool | `false` | Enable PostgreSQL |
+| postgresql.image | object | `{"registry":"docker.io","repository":"postgres"}` | PostgreSQL container image. Defaults to docker.io/postgres at the chart's pinned appVersion. |
+| postgresql.persistence | object | `{"enabled":true,"existingClaim":""}` | Persistent storage for the StatefulSet's data volume. |
+| postgresql.service | object | `{"port":5432}` | ClusterIP service exposing PostgreSQL on the standard port. |
 | readinessProbe | object | `{}` | DEPRECATED: Use main, worker, and webhook blocks readinessProbe field instead. This field will be removed in a future release. |
-| redis | object | `{"architecture":"standalone","auth":{"enabled":true},"enabled":false,"image":{"repository":"bitnamilegacy/redis"},"master":{"persistence":{"enabled":false},"service":{"ports":{"redis":6379}}}}` | Bitnami Redis configuration |
-| redis.architecture | string | `"standalone"` | Enable redis architecture. |
-| redis.auth | object | `{"enabled":true}` | This is for setting up the auth. |
-| redis.auth.enabled | bool | `true` | Enable password authentication |
-| redis.enabled | bool | `false` | Enable redis |
-| redis.image.repository | string | `"bitnamilegacy/redis"` | This is temporary workaround because of bitnami's deprecation until to completely replace it with our solution. |
-| redis.master.service.ports.redis | int | `6379` | Redis master service port |
+| redis | object | `{"auth":{"enabled":false},"dataStorage":{"enabled":false},"enabled":false,"image":{"registry":"docker.io","repository":"valkey/valkey"},"service":{"port":6379}}` | Valkey (Redis-wire-compatible) configuration. Subchart: valkey/valkey (https://valkey.io/valkey-helm), aliased as `redis` to keep n8n's redis-* value paths. |
+| redis.auth | object | `{"enabled":false}` | Authentication. Valkey uses ACL, not Redis' single-password model. Disabled by default; rely on cluster-internal isolation. To enable, set `auth.enabled: true`, declare `auth.aclUsers.default.password` (or `auth.usersExistingSecret`), and mirror the value in `externalRedis.password` so n8n can connect. |
+| redis.dataStorage | object | `{"enabled":false}` | Persistent storage for the Valkey pod. Disabled by default — n8n only uses Valkey as a Bull queue broker, so data is recoverable on restart. |
+| redis.enabled | bool | `false` | Enable Valkey |
+| redis.image | object | `{"registry":"docker.io","repository":"valkey/valkey"}` | Valkey container image. Defaults to docker.io/valkey/valkey at the chart's pinned appVersion. |
+| redis.service | object | `{"port":6379}` | Service definition consumed by n8n's queue-mode config. Valkey exposes a single ClusterIP service named `{release}-redis`. |
 | resources | object | `{}` | DEPRECATED: Use main, worker, and webhook blocks resources fields instead. This field will be removed in a future release. |
 | securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":false,"runAsGroup":1000,"runAsNonRoot":true,"runAsUser":1000}` | This is for setting Security Context to a Container. For more information checkout: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | sentry.backendDsn | string | `""` | Sentry DSN for backend. |
