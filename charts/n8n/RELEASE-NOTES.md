@@ -4,6 +4,10 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
+## 2.2.0
+
+- **Added**: `taskRunners.external.securityContext` lets you set a dedicated container `securityContext` on the external task-runner sidecar. When left empty (the default), the sidecar inherits `.Values.securityContext` — so existing deployments now apply the chart-level non-root posture to the runner container instead of leaving it unset. Useful on clusters enforcing Pod Security Standards `restricted`, where a non-numeric image `USER` cannot be proven non-root and an explicit `runAsUser` must be provided.
+
 ## 2.1.1
 
 - **Fixed**: The external task-runner sidecar's container port is now named `task-runner` instead of `http`, with the liveness and readiness probes updated to match. The previous `http` name collided with the main n8n container's port in the same pod, which could lead a Service's `targetPort: http` to resolve to the wrong container and to confusing kubectl/describe output. Behaviour-only fix — no values changed.

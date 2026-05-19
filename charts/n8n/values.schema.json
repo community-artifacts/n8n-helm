@@ -5103,6 +5103,12 @@
                   "boolean"
                 ]
               }
+            },
+            "securityContext": {
+              "default": {},
+              "description": "Container securityContext for the runner sidecar; falls back to .Values.securityContext when empty",
+              "title": "securityContext",
+              "type": "object"
             }
           },
           "required": [

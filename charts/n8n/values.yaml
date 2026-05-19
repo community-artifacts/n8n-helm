@@ -848,6 +848,16 @@ taskRunners:
     # extraEnvVars:
     #   N8N_RUNNERS_STDLIB_ALLOW: "*"
     #   N8N_RUNNERS_EXTERNAL_ALLOW: "*"
+    # -- Container securityContext for the runner sidecar. When empty
+    # the chart falls back to `.Values.securityContext`. Override here
+    # when the runner image uses a different (non-numeric) USER and
+    # the cluster enforces `runAsNonRoot: true` — K8s cannot prove a
+    # username is non-root, so a numeric `runAsUser` is required.
+    securityContext: {}
+    # securityContext:
+    #   runAsUser: 1000
+    #   runAsGroup: 1000
+    #   runAsNonRoot: true
     # -- The node options for the external task runner
     nodeOptions:
       - "--max-semi-space-size=16"
