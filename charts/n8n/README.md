@@ -4,7 +4,7 @@
 
 A Helm chart for fair-code workflow automation platform with native AI capabilities. Combine visual building with custom code, self-host or cloud, 400+ integrations.
 
-![Version: 1.16.40](https://img.shields.io/badge/Version-1.16.40-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.20.6](https://img.shields.io/badge/AppVersion-2.20.6-informational?style=flat-square)
+![Version: 2.0.0](https://img.shields.io/badge/Version-2.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.21.4](https://img.shields.io/badge/AppVersion-2.21.4-informational?style=flat-square)
 
 ## Documentation
 
@@ -13,7 +13,7 @@ For usage instructions, configuration options, and additional information about 
 ## Get Helm Repository Info
 
 ```console
-helm repo add community-artifacts https://community-artifacts.github.io/n8n
+helm repo add community-artifacts https://community-artifacts.github.io/n8n-helm
 helm repo update
 ```
 
@@ -22,7 +22,7 @@ _See [`helm repo`](https://helm.sh/docs/helm/helm_repo/) for command documentati
 ## Installing the Chart
 
 ```console
-helm install [RELEASE_NAME] community-artifacts/n8n
+helm install [RELEASE_NAME] community-artifacts/n8n-helm
 ```
 
 _See [configuration](#configuration) below._
@@ -908,7 +908,7 @@ _See [helm uninstall](https://helm.sh/docs/helm/helm_uninstall/) for command doc
 ## Upgrading Chart
 
 ```console
-helm upgrade [RELEASE_NAME] community-artifacts/n8n
+helm upgrade [RELEASE_NAME] community-artifacts/n8n-helm
 ```
 
 ## Values
@@ -1300,7 +1300,7 @@ helm upgrade [RELEASE_NAME] community-artifacts/n8n
 
 ## Source Code
 
-* <https://github.com/community-artifacts/n8n>
+* <https://github.com/community-artifacts/n8n-helm>
 * <https://github.com/n8n-io/n8n>
 
 ## Chart Development

@@ -103,10 +103,47 @@ A change is considered green when `helm lint`, `helm template`, and `helm unitte
 
 ## Versioning & releases
 
-- `Chart.yaml#version` follows SemVer with a `-ca.N` suffix (e.g. `1.16.40-ca.1`). The base part tracks the broad n8n feature line; the `-ca.N` part bumps on every chart change.
-- `Chart.yaml#appVersion` is the n8n container tag the chart was last validated against. Bump it when bumping the default image tag.
-- `RELEASE-NOTES.md` gets a new entry on every version bump. Format is the existing bullet style.
+- **The chart version is independent SemVer.** It starts at `2.0.0`. The chart's MAJOR component tracks n8n's MAJOR component (the `2.x` chart line ships n8n `2.x`; the day n8n releases `3.0.0` the chart starts a `3.x` line). MINOR and PATCH bumps are at the maintainer's discretion when chart-side behavior changes, regardless of whether `appVersion` moves.
+- `Chart.yaml#appVersion` is the n8n image tag the chart was last validated against. Bump it whenever a newer stable n8n binary should be the default.
+- The image tag in `values.yaml` is left as `""` and defaults to `appVersion`. Do not hardcode the tag in `values.yaml`.
+- The chart version and `appVersion` are independent. It is normal for one to move without the other (e.g. an `appVersion: 2.21.4 → 2.21.5` security patch with `version: 2.0.0 → 2.0.1`, or a chart-internal refactor that bumps `version` while `appVersion` stays put).
+- `RELEASE-NOTES.md` gets a new `## <version>` section on every chart version bump. Bullet style follows the existing entries (`**Added** / **Changed** / **Fixed** / **Removed**`). Always include which `appVersion` the bundle ships, especially when `appVersion` itself changed.
 - Pushing to `main` triggers `.github/workflows/release.yml`, which uses `helm/chart-releaser-action` to package `charts/n8n` and publish to the `gh-pages` branch. GitHub Pages must be enabled with `gh-pages` as the source.
+
+### Reading the n8n changelog on every binary bump
+
+Every time `Chart.yaml#appVersion` moves, you **must** read the n8n release notes for every version between the previous and the new `appVersion`, and reflect any hosting-relevant changes in the chart in the same PR. This is non-negotiable: silent binary bumps have a history of breaking deployments because new env vars become required, defaults change, or endpoints move.
+
+Sources, in order of preference:
+
+- `https://github.com/n8n-io/n8n/releases/tag/n8n@<version>` (canonical release notes)
+- `https://api.github.com/repos/n8n-io/n8n/releases/tags/n8n@<version>` (JSON, easier to grep)
+- `https://github.com/n8n-io/n8n/blob/master/CHANGELOG.md` (consolidated)
+
+A one-liner to skim every intermediate release between two tags:
+
+```bash
+for tag in 2.21.0 2.21.1 2.21.2 2.21.3 2.21.4; do
+  echo "==== n8n@${tag} ===="
+  curl -sL "https://api.github.com/repos/n8n-io/n8n/releases/tags/n8n@${tag}" \
+    | python3 -c "import json,sys; print(json.load(sys.stdin).get('body',''))" \
+    | grep -iE "(N8N_|environment variable|env var|deprecat|BREAK|breaking|port |secret|configmap|healthz|liveness|readiness|graceful|shutdown|tls|ssl |queue|webhook|runner|metric|prometheus|binary data|s3 |postgres|redis |sqlite|community.?package)"
+done
+```
+
+What to look for and how to react:
+
+| Signal in the release notes | Chart action |
+| --- | --- |
+| New `N8N_*` env var that gates a feature | Add a first-class values key under the matching block (or document `extraEnvVars` as the escape hatch). Update `values.schema.json`. |
+| Env var renamed or deprecated | Map old → new in `_helpers.tpl` if both must be supported for one minor; otherwise update wiring and note in RELEASE-NOTES. |
+| Health-check / port / endpoint change | Update probes in `deployment.yaml` / `deployment-worker.yaml` / `deployment-webhook.yaml` and the `service.yaml` ports. |
+| Default-value change in n8n | Either mirror the default in `values.yaml` or call it out in RELEASE-NOTES with the user-visible impact. |
+| New required Postgres / Redis behavior (e.g. SSL mode, ACL) | Update the relevant `db.*` / `externalRedis.*` block and the corresponding ConfigMap template. |
+| Queue / multi-main / runner protocol change | Cross-check the templates that wire `worker.mode=queue`, `main.count`, and `taskRunners.*`. |
+| Pure node-package / UI-only change | No chart action; mention in RELEASE-NOTES as appVersion-only. |
+
+Record the audit outcome in the same `## <chart-version>` RELEASE-NOTES section. If the bump genuinely required zero chart changes, say so explicitly ("Audited n8n 2.21.5..2.21.7 release notes; no hosting-relevant changes").
 
 ## Work in progress
 

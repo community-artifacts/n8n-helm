@@ -28,9 +28,9 @@ When the new fields are left empty the chart falls back to the in-process task r
 ## Install
 
 ```bash
-helm repo add community-artifacts https://community-artifacts.github.io/n8n
+helm repo add community-artifacts https://community-artifacts.github.io/n8n-helm
 helm repo update
-helm install n8n community-artifacts/n8n
+helm install n8n community-artifacts/n8n-helm
 ```
 
 ## Features
@@ -57,10 +57,6 @@ Planned:
 - **NetworkPolicy presets** — opinionated defaults beyond the existing one rendered in queue mode.
 - **OpenTelemetry integration** — first-class env wiring for the OTel collector endpoint.
 - **Externalized config** — option to back the whole `*-configmap` set with a single user-provided ConfigMap / Secret reference.
-
-## Releasing
-
-Tagged releases are published via [helm/chart-releaser-action](https://github.com/helm/chart-releaser-action). On every push to `main`, the workflow packages each chart under `charts/` and pushes the `.tgz` plus an updated `index.yaml` to the `gh-pages` branch. Enable GitHub Pages on this repo (Settings → Pages → Source: `gh-pages`) before the first release.
 
 ## License
 

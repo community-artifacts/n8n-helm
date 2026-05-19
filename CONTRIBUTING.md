@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for taking the time to improve the `community-artifacts/n8n` Helm chart. This document is the short version of [AGENTS.md](AGENTS.md) — read that file too if you plan to make non-trivial changes.
+Thanks for taking the time to improve the `community-artifacts/n8n-helm` Helm chart. This document is the short version of [AGENTS.md](AGENTS.md) — read that file too if you plan to make non-trivial changes.
 
 ## Ground rules
 
@@ -47,8 +47,9 @@ For non-trivial changes also render the realistic configurations listed in `AGEN
 ## Pull requests
 
 - One PR per logical change. A `taskRunners` tweak and an ingress refactor do not belong in the same PR.
-- Bump `charts/n8n/Chart.yaml#version` in the same PR. The suffix scheme is `<base>-ca.<n>` (e.g. `1.16.40-ca.2`). Bump `appVersion` only when changing the default n8n image tag.
-- Add a `RELEASE-NOTES.md` entry that matches the new version. Use the same bullet style as the existing entries (`**Added** / **Changed** / **Fixed** / **Removed**`).
+- The chart version is independent SemVer (starting at `2.0.0`). The chart's MAJOR component tracks n8n's MAJOR. MINOR and PATCH bumps are at maintainer discretion when chart-side behavior changes. `Chart.yaml#version` and `Chart.yaml#appVersion` are independent; either can move without the other.
+- **Whenever you bump `appVersion`,** read the n8n release notes for every version between the previous and the new `appVersion`, and apply any hosting-relevant changes (new env vars, deprecations, port or endpoint changes, default-value shifts) in the same PR. The full procedure and the grep recipe are in [AGENTS.md](AGENTS.md#reading-the-n8n-changelog-on-every-binary-bump).
+- Add a `RELEASE-NOTES.md` entry under a new `## <version>` heading. Bullet style: `**Added** / **Changed** / **Fixed** / **Removed**`. Always note which `appVersion` ships with the bundle; if `appVersion` moved, summarize what the n8n-changelog audit surfaced.
 - If your change adds or modifies values keys: update `values.yaml` (with a `# --` comment, which is the source of the values table in `charts/n8n/README.md`), update `values.schema.json`, and update or add unit tests.
 - Squash before merging; PR title becomes the merge commit message.
 
@@ -77,6 +78,10 @@ Useful issue reports include:
 - Kubernetes server version.
 - The `values.yaml` (or `--set` flags) that reproduce the problem, with secrets redacted.
 - Either the `helm template` output that's wrong or the live cluster behaviour you observed.
+
+## Releasing
+
+Tagged releases are published via [helm/chart-releaser-action](https://github.com/helm/chart-releaser-action). On every push to `main`, the workflow packages each chart under `charts/` and pushes the `.tgz` plus an updated `index.yaml` to the `gh-pages` branch. Enable GitHub Pages on this repo (Settings → Pages → Source: `gh-pages`) before the first release.
 
 ## License
 

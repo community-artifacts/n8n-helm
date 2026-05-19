@@ -7,10 +7,10 @@ description: |-
   (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage,
   multi-main, webhook processors, ServiceMonitor).
 type: application
-version: 1.16.40-ca.1
-appVersion: 2.20.6
+version: 2.0.0
+appVersion: 2.21.4
 kubeVersion: ">=1.23.0-0"
-home: https://github.com/community-artifacts/n8n
+home: https://github.com/community-artifacts/n8n-helm
 icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
 keywords:
   - n8n
@@ -22,7 +22,7 @@ keywords:
   - low-code-plattform
   - low-code
 sources:
-  - https://github.com/community-artifacts/n8n
+  - https://github.com/community-artifacts/n8n-helm
   - https://github.com/n8n-io/n8n
 maintainers:
   - name: community-artifacts
@@ -44,6 +44,6 @@ annotations:
   artifacthub.io/license: Apache-2.0
   artifacthub.io/links: |
     - name: Chart Source
-      url: https://github.com/community-artifacts/n8n
+      url: https://github.com/community-artifacts/n8n-helm
     - name: n8n Project
       url: https://github.com/n8n-io/n8n
