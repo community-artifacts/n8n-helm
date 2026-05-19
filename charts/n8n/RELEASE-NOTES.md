@@ -4,9 +4,9 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
-## 3.0.0
+## 2.1.0
 
-- **Breaking**: Replaced the Bitnami PostgreSQL and Redis subcharts. The chart now ships [`cloudpirates/postgres`](https://artifacthub.io/packages/helm/cloudpirates-postgres/postgres) `0.19.4` (PostgreSQL 18.3, StatefulSet, official `postgres` image) and [`valkey/valkey`](https://github.com/valkey-io/valkey-helm) `0.9.4` (Valkey 9.0.2, Redis-wire-compatible).
+- **Breaking** (within 2.x, since the chart's MAJOR is pinned to the n8n binary's MAJOR): Replaced the Bitnami PostgreSQL and Redis subcharts. The chart now ships [`cloudpirates/postgres`](https://artifacthub.io/packages/helm/cloudpirates-postgres/postgres) `0.19.4` (PostgreSQL 18.3, StatefulSet, official `postgres` image) and [`valkey/valkey`](https://github.com/valkey-io/valkey-helm) `0.9.4` (Valkey 9.0.2, Redis-wire-compatible).
 - **Breaking**: Restructured `postgresql.*` values:
   - `postgresql.primary.service.ports.postgresql` → `postgresql.service.port`
   - `postgresql.primary.persistence.{enabled,existingClaim}` → `postgresql.persistence.{enabled,existingClaim}`
