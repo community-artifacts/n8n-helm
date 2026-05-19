@@ -4,6 +4,10 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
+## 2.1.1
+
+- **Fixed**: The external task-runner sidecar's container port is now named `task-runner` instead of `http`, with the liveness and readiness probes updated to match. The previous `http` name collided with the main n8n container's port in the same pod, which could lead a Service's `targetPort: http` to resolve to the wrong container and to confusing kubectl/describe output. Behaviour-only fix — no values changed.
+
 ## 2.1.0
 
 - **Breaking** (within 2.x, since the chart's MAJOR is pinned to the n8n binary's MAJOR): Replaced the Bitnami PostgreSQL and Redis subcharts. The chart now ships [`cloudpirates/postgres`](https://artifacthub.io/packages/helm/cloudpirates-postgres/postgres) `0.19.4` (PostgreSQL 18.3, StatefulSet, official `postgres` image) and [`valkey/valkey`](https://github.com/valkey-io/valkey-helm) `0.9.4` (Valkey 9.0.2, Redis-wire-compatible).

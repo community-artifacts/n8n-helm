@@ -312,17 +312,17 @@ spec:
           command: ["/usr/local/bin/task-runner-launcher"]
           args: ["javascript"]
           ports:
-            - name: http
+            - name: task-runner
               containerPort: {{ .Values.taskRunners.external.port }}
               protocol: TCP
           livenessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: task-runner
           readinessProbe:
             httpGet:
               path: /healthz
-              port: http
+              port: task-runner
           resources:
             {{- toYaml .Values.taskRunners.external.resources | nindent 12 }}
           env:

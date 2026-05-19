@@ -7,7 +7,7 @@ description: |-
   (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage,
   multi-main, webhook processors, ServiceMonitor).
 type: application
-version: 2.1.0
+version: 2.1.1
 appVersion: 2.21.4
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/community-artifacts/n8n-helm
