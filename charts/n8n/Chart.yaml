@@ -7,7 +7,7 @@ description: |-
   (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage,
   multi-main, webhook processors, ServiceMonitor).
 type: application
-version: 2.2.0
+version: 2.2.1
 appVersion: 2.21.4
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/community-artifacts/n8n-helm
@@ -49,3 +49,11 @@ annotations:
       url: https://github.com/community-artifacts/n8n-helm
     - name: n8n Project
       url: https://github.com/n8n-io/n8n
+  # Per-version changelog rendered on the chart's Artifact Hub page.
+  # Replace the entries on every version bump — they describe the
+  # changes since the previous version. Valid `kind` values:
+  # added | changed | deprecated | removed | fixed | security.
+  # Spec: https://artifacthub.io/docs/topics/annotations/helm/
+  artifacthub.io/changes: |
+    - kind: added
+      description: Per-version changelog now surfaced on Artifact Hub via the `artifacthub.io/changes` annotation. Future releases will populate it with structured entries.

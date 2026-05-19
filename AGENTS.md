@@ -108,6 +108,7 @@ A change is considered green when `helm lint`, `helm template`, and `helm unitte
 - The image tag in `values.yaml` is left as `""` and defaults to `appVersion`. Do not hardcode the tag in `values.yaml`.
 - The chart version and `appVersion` are independent. It is normal for one to move without the other (e.g. an `appVersion: 2.21.4 → 2.21.5` security patch with `version: 2.0.0 → 2.0.1`, or a chart-internal refactor that bumps `version` while `appVersion` stays put).
 - `RELEASE-NOTES.md` gets a new `## <version>` section on every chart version bump. Bullet style follows the existing entries (`**Added** / **Changed** / **Fixed** / **Removed**`). Always include which `appVersion` the bundle ships, especially when `appVersion` itself changed.
+- **Refresh the `artifacthub.io/changes` annotation in `Chart.yaml` on every chart version bump.** Artifact Hub renders this as the per-version changelog on the chart page; the annotation is baked into the tgz at release time and cannot be backfilled. Keep entries parallel to the `RELEASE-NOTES.md` bullets but one line each — `kind` ∈ `added|changed|deprecated|removed|fixed|security`. Spec: <https://artifacthub.io/docs/topics/annotations/helm/>.
 - Pushing to `main` triggers `.github/workflows/release.yml`, which uses `helm/chart-releaser-action` to package `charts/n8n` and publish to the `gh-pages` branch. GitHub Pages must be enabled with `gh-pages` as the source.
 
 ### Reading the n8n changelog on every binary bump

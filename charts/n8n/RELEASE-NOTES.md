@@ -4,6 +4,10 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
+## 2.2.1
+
+- **Added**: Per-version changelog surfaced on the chart's [Artifact Hub](https://artifacthub.io/) page via the `artifacthub.io/changes` annotation in `Chart.yaml`. Every version bump from this release onwards must populate the annotation with structured `kind` + `description` entries describing the changes since the previous version. Past tgz files (2.2.0, 2.1.1, 2.1.0) cannot be retro-annotated — their Artifact Hub changelog will appear empty.
+
 ## 2.2.0
 
 - **Added**: `taskRunners.external.securityContext` lets you set a dedicated container `securityContext` on the external task-runner sidecar. When left empty (the default), the sidecar inherits `.Values.securityContext` — so existing deployments now apply the chart-level non-root posture to the runner container instead of leaving it unset. Useful on clusters enforcing Pod Security Standards `restricted`, where a non-numeric image `USER` cannot be proven non-root and an explicit `runAsUser` must be provided.
