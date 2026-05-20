@@ -55,7 +55,7 @@ jobs:
       - uses: azure/setup-helm@v4
 
       - name: Install helm-unittest plugin
-        run: helm plugin install ${{ env.HELM_UNITTEST_PLUGIN }}
+        run: helm plugin install --verify=false ${{ env.HELM_UNITTEST_PLUGIN }}
 
       - name: Add chart dependencies
         run: |
