@@ -50,6 +50,20 @@ jobs:
         run: |
           mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
           printf '%s' "$CR_GPG_KEY" | base64 -d | gpg --batch --import
+          # Diagnostic: show the algorithm of every imported secret key.
+          # Field 4 of `sec:` lines per OpenPGP RFC 4880: 1 = RSA, 17 = DSA,
+          # 19 = ECDSA, 22 = EdDSA (Ed25519). `cr` only accepts 1 or 17 —
+          # anything else fails with "openpgp: unsupported feature: public
+          # key type: N". This step never prints the key material itself.
+          echo "Imported secret-key algorithms:"
+          gpg --list-secret-keys --with-colons \
+            | awk -F: '/^sec/{algo=$4; print "  algo="algo" ("(algo==1?"RSA":algo==17?"DSA":algo==22?"Ed25519":"other")")"}'
+          if gpg --list-secret-keys --with-colons | awk -F: '/^sec/{exit ($4==1 || $4==17)?0:1}'; then
+            :
+          else
+            echo "::error::No RSA/DSA secret key in CR_GPG_KEY — cr cannot sign with the current key. Regenerate the key with Key-Type: RSA, Key-Length: 4096 and re-upload."
+            exit 1
+          fi
           # `cr` (used by chart-releaser-action) needs the legacy secring.gpg
           # format; GnuPG 2.1+ stopped writing it by default, so export it.
           gpg --batch --pinentry-mode loopback --passphrase "$CR_GPG_PASSPHRASE" \
