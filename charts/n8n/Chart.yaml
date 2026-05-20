@@ -7,7 +7,7 @@ description: |-
   (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage,
   multi-main, webhook processors, ServiceMonitor).
 type: application
-version: 2.2.5
+version: 2.2.6
 appVersion: 2.21.4
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/community-artifacts/n8n-helm
@@ -55,5 +55,5 @@ annotations:
   # added | changed | deprecated | removed | fixed | security.
   # Spec: https://artifacthub.io/docs/topics/annotations/helm/
   artifacthub.io/changes: |
-    - kind: added
-      description: New `taskRunners.external.extraVolumeMounts` value to attach arbitrary volumes (e.g. a ConfigMap) into the external task-runner sidecar. The primary use case is overlaying `/etc/n8n-task-runners.json` to widen the `env-overrides` allowlist that the `n8nio/runners` image bakes — without this the image silently forces `N8N_RUNNERS_STDLIB_ALLOW` / `N8N_RUNNERS_EXTERNAL_ALLOW` to empty, so python `import json` and other stdlib modules raise `Security violations detected`.
+    - kind: fixed
+      description: Declare `taskRunners.external.extraVolumeMounts` in values.schema.json. 2.2.5 added the value but forgot the schema entry, so any deploy setting it failed with `additional properties 'extraVolumeMounts' not allowed`.

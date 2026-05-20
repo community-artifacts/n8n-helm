@@ -5109,6 +5109,15 @@
               "description": "Container securityContext for the runner sidecar; falls back to .Values.securityContext when empty",
               "title": "securityContext",
               "type": "object"
+            },
+            "extraVolumeMounts": {
+              "default": [],
+              "description": "Extra volumeMounts attached to the runner sidecar; typical use is overlaying /etc/n8n-task-runners.json with a ConfigMap to widen the launcher allowlist",
+              "title": "extraVolumeMounts",
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
             }
           },
           "required": [
