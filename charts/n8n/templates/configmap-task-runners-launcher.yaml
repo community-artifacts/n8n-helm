@@ -1,0 +1,19 @@
+{{- /*
+ConfigMap rendered when `taskRunners.external.launcherConfig` is set.
+The deployment / statefulset templates auto-mount this on top of
+`/etc/n8n-task-runners.json` in the runner sidecar, so users can
+widen the launcher's env-overrides allowlist without having to
+craft a custom ConfigMap and wire it via extraVolumeMounts.
+*/}}
+{{- if and (eq .Values.taskRunners.mode "external") .Values.taskRunners.external.launcherConfig }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "n8n.taskRunners.fullname" . }}-launcher-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "n8n.taskRunners.labels" . | nindent 4 }}
+data:
+  n8n-task-runners.json: |-
+    {{- .Values.taskRunners.external.launcherConfig | nindent 4 }}
+{{- end }}

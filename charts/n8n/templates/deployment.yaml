@@ -351,7 +351,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ template "n8n.taskRunners.fullname" . }}-configmap
-          {{- if or .Values.nodes.external.packages .Values.main.persistence.enabled .Values.taskRunners.external.extraVolumeMounts }}
+          {{- if or .Values.nodes.external.packages .Values.main.persistence.enabled .Values.taskRunners.external.extraVolumeMounts .Values.taskRunners.external.launcherConfig }}
           volumeMounts:
           {{- end }}
           {{- if or .Values.nodes.external.packages .Values.main.persistence.enabled }}
@@ -367,6 +367,12 @@ spec:
               mountPath: "/home/node/.n8n/nodes"
               readOnly: false
           {{- end }}
+          {{- if .Values.taskRunners.external.launcherConfig }}
+            - name: task-runners-launcher-config
+              mountPath: /etc/n8n-task-runners.json
+              subPath: n8n-task-runners.json
+              readOnly: true
+          {{- end }}
           {{- with .Values.taskRunners.external.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -374,7 +380,7 @@ spec:
       {{- with .Values.main.extraContainers }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if or .Values.main.persistence.enabled (eq (include "n8n.main.hasVolumes" .) "true") }}
+      {{- if or .Values.main.persistence.enabled (eq (include "n8n.main.hasVolumes" .) "true") .Values.taskRunners.external.launcherConfig }}
       volumes:
       {{- end }}
       {{- if .Values.main.persistence.enabled }}
@@ -388,6 +394,11 @@ spec:
       {{- if .Values.nodes.external.packages }}
         - name: community-node-modules
           emptyDir: {}
+      {{- end }}
+      {{- if .Values.taskRunners.external.launcherConfig }}
+        - name: task-runners-launcher-config
+          configMap:
+            name: {{ template "n8n.taskRunners.fullname" . }}-launcher-config
       {{- end }}
       {{- if .Values.npmRegistry.enabled }}
         - name: npmrc

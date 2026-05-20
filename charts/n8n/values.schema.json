@@ -5112,12 +5112,18 @@
             },
             "extraVolumeMounts": {
               "default": [],
-              "description": "Extra volumeMounts attached to the runner sidecar; typical use is overlaying /etc/n8n-task-runners.json with a ConfigMap to widen the launcher allowlist",
+              "description": "Extra volumeMounts attached to the runner sidecar",
               "title": "extraVolumeMounts",
               "type": "array",
               "items": {
                 "type": "object"
               }
+            },
+            "launcherConfig": {
+              "default": "",
+              "description": "Replacement n8n-task-runners.json content. When non-empty the chart renders a ConfigMap and overlays /etc/n8n-task-runners.json on the runner sidecar, so users can widen the launcher allowlist without crafting their own ConfigMap and extraVolumeMounts wiring.",
+              "title": "launcherConfig",
+              "type": "string"
             }
           },
           "required": [

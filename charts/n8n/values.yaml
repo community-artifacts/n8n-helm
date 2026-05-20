@@ -853,17 +853,42 @@ taskRunners:
     extraEnvVars: {}
     # extraEnvVars:
     #   N8N_RUNNERS_LAUNCHER_LOG_LEVEL: debug
-    # -- Extra volumeMounts for the runner sidecar. Use this to overlay
-    # `/etc/n8n-task-runners.json` (the launcher config baked into the
-    # `n8nio/runners` image) with a ConfigMap, when you need to widen
-    # the `env-overrides` allowlist for stdlib / external modules. The
-    # backing volume itself goes in `main.volumes` (or `worker.volumes`).
+    # -- Extra volumeMounts for the runner sidecar. Use this for any
+    # mounts not covered by the dedicated fields below. The backing
+    # volume itself goes in `main.volumes` / `worker.volumes`.
     extraVolumeMounts: []
     # extraVolumeMounts:
-    #   - name: task-runners-config
-    #     mountPath: /etc/n8n-task-runners.json
-    #     subPath: n8n-task-runners.json
+    #   - name: my-extra-volume
+    #     mountPath: /etc/whatever
     #     readOnly: true
+    # -- Replacement launcher config for the runner sidecar. When set,
+    # the chart renders a ConfigMap with this string under
+    # `n8n-task-runners.json` and overlays it on
+    # `/etc/n8n-task-runners.json` in the runner container. Use this
+    # to widen the allowlists that the `n8nio/runners` image bakes
+    # via the launcher's `env-overrides` block (it silently forces
+    # `N8N_RUNNERS_STDLIB_ALLOW` / `N8N_RUNNERS_EXTERNAL_ALLOW` to
+    # empty, so setting those via `extraEnvVars` does nothing —
+    # replacing the file is the only way). When empty the runner
+    # uses the image's baked file unchanged.
+    launcherConfig: ""
+    # launcherConfig: |
+    #   {
+    #     "task-runners": [
+    #       {
+    #         "runner-type": "python",
+    #         "workdir": "/home/runner",
+    #         "command": "/opt/runners/task-runner-python/.venv/bin/python",
+    #         "args": ["-I", "-B", "-X", "disable_remote_debug", "-m", "src.main"],
+    #         "health-check-server-port": "5682",
+    #         "allowed-env": ["PATH","N8N_RUNNERS_LAUNCHER_LOG_LEVEL"],
+    #         "env-overrides": {
+    #           "N8N_RUNNERS_STDLIB_ALLOW": "*",
+    #           "N8N_RUNNERS_EXTERNAL_ALLOW": "*"
+    #         }
+    #       }
+    #     ]
+    #   }
     # -- Container securityContext for the runner sidecar. When empty
     # the chart falls back to `.Values.securityContext`. Override here
     # when the runner image uses a different (non-numeric) USER and
