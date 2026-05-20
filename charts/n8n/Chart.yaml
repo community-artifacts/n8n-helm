@@ -7,7 +7,7 @@ description: |-
   (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage,
   multi-main, webhook processors, ServiceMonitor).
 type: application
-version: 2.2.3
+version: 2.2.4
 appVersion: 2.21.4
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/community-artifacts/n8n-helm
@@ -56,4 +56,4 @@ annotations:
   # Spec: https://artifacthub.io/docs/topics/annotations/helm/
   artifacthub.io/changes: |
     - kind: fixed
-      description: Stop emitting the deprecated `N8N_RUNNERS_ENABLED` environment variable. n8n logs `N8N_RUNNERS_ENABLED -> Remove this environment variable; it is no longer needed.` on startup when it is set; task runners are always enabled on supported n8n versions.
+      description: Mount the main/worker persistence PVC at the configured mountPath regardless of `taskRunners.mode`. Previously the volumeMount was gated on `taskRunners.mode == "internal"`, so external-runner deployments provisioned the PVC but never mounted it — sqlite and other n8n state silently lived on the pod's overlay filesystem and were lost on restart.

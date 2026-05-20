@@ -271,7 +271,7 @@ spec:
           {{- if or (eq (include "n8n.worker.hasVolumeMounts" .) "true") .Values.worker.persistence.enabled }}
           volumeMounts:
           {{- end }}
-          {{- if and (or .Values.nodes.external.packages .Values.worker.persistence.enabled) (eq .Values.taskRunners.mode "internal") }}
+          {{- if or .Values.nodes.external.packages .Values.worker.persistence.enabled }}
             - name: {{ default "node-modules" .Values.worker.persistence.volumeName }}
               mountPath: {{ .Values.worker.persistence.mountPath }}
               {{- if .Values.worker.persistence.subPath }}

@@ -242,10 +242,10 @@ spec:
             - secretRef:
                 name: {{ . }}
           {{- end }}
-          {{- if or (eq (include "n8n.main.hasVolumeMounts" .) "true") (eq .Values.taskRunners.mode "internal") }}
+          {{- if or (eq (include "n8n.main.hasVolumeMounts" .) "true") (eq .Values.taskRunners.mode "internal") .Values.main.persistence.enabled }}
           volumeMounts:
           {{- end }}
-          {{- if eq .Values.taskRunners.mode "internal" }}
+          {{- if or (eq .Values.taskRunners.mode "internal") .Values.main.persistence.enabled }}
             - name: {{ default "node-modules" .Values.main.persistence.volumeName }}
               mountPath: {{ .Values.main.persistence.mountPath }}
               {{- if .Values.main.persistence.subPath }}
