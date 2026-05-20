@@ -69,6 +69,13 @@ What this means for adopters:
 - **GitOps users should pin `encryptionKey` or `existingEncryptionKeySecret` and set `requireExplicitEncryptionKey: true`** — the chart will fail-loud rather than silently regenerate the key on every reconcile.
 - **Issues and PRs welcome.** Real-world adoption signals (issues / questions / feature requests) feed the prioritisation that drives version bumps.
 
+## Contributing
+
+PRs target the **`develop`** branch — `main` is reserved for releases and direct pushes are blocked. Every push to `develop` or `dev/**` runs the **Validate Chart** CI workflow (`helm lint`, schema cross-check, ~770 unit-test assertions, scenario matrix, kubeconform, minikube smoke install). Releases ship by opening a PR `develop` → `main`; merging triggers the chart-releaser pipeline.
+
+- [TESTING.md](TESTING.md) — testing layers, the `tests/scenarios/` matrix, local minikube setup, what CI enforces.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — branch strategy, PR checklist, release process, commit-message conventions.
+
 ## License
 
 Apache-2.0.
