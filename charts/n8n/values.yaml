@@ -842,12 +842,28 @@ taskRunners:
     #   - javascript
     #   - python
     # -- Extra environment variables for the runner sidecar (map of
-    # name -> value). Typically used to allow stdlib / external module
-    # access for python runners.
+    # name -> value). NOTE: the `n8nio/runners` image bakes
+    # `/etc/n8n-task-runners.json` with an `env-overrides` block that
+    # silently overwrites `N8N_RUNNERS_STDLIB_ALLOW` and
+    # `N8N_RUNNERS_EXTERNAL_ALLOW` to empty strings — setting those
+    # here will not take effect. To allow python stdlib / external
+    # modules, mount your own `n8n-task-runners.json` over `/etc/` via
+    # `extraVolumeMounts` below (and a corresponding ConfigMap added
+    # to `main.volumes` / `worker.volumes`).
     extraEnvVars: {}
     # extraEnvVars:
-    #   N8N_RUNNERS_STDLIB_ALLOW: "*"
-    #   N8N_RUNNERS_EXTERNAL_ALLOW: "*"
+    #   N8N_RUNNERS_LAUNCHER_LOG_LEVEL: debug
+    # -- Extra volumeMounts for the runner sidecar. Use this to overlay
+    # `/etc/n8n-task-runners.json` (the launcher config baked into the
+    # `n8nio/runners` image) with a ConfigMap, when you need to widen
+    # the `env-overrides` allowlist for stdlib / external modules. The
+    # backing volume itself goes in `main.volumes` (or `worker.volumes`).
+    extraVolumeMounts: []
+    # extraVolumeMounts:
+    #   - name: task-runners-config
+    #     mountPath: /etc/n8n-task-runners.json
+    #     subPath: n8n-task-runners.json
+    #     readOnly: true
     # -- Container securityContext for the runner sidecar. When empty
     # the chart falls back to `.Values.securityContext`. Override here
     # when the runner image uses a different (non-numeric) USER and

@@ -347,6 +347,9 @@ spec:
               mountPath: "/home/node/.n8n/nodes"
               readOnly: false
           {{- end }}
+          {{- with .Values.taskRunners.external.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       {{- end }}
       {{- with .Values.worker.extraContainers }}
         {{- toYaml . | nindent 8 }}

@@ -351,8 +351,10 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ template "n8n.taskRunners.fullname" . }}-configmap
-          {{- if or .Values.nodes.external.packages .Values.worker.persistence.enabled }}
+          {{- if or .Values.nodes.external.packages .Values.worker.persistence.enabled .Values.taskRunners.external.extraVolumeMounts }}
           volumeMounts:
+          {{- end }}
+          {{- if or .Values.nodes.external.packages .Values.worker.persistence.enabled }}
             - name: {{ default "node-modules" .Values.worker.persistence.volumeName }}
               mountPath: {{ .Values.worker.persistence.mountPath }}
               {{- if .Values.worker.persistence.subPath }}
@@ -364,6 +366,9 @@ spec:
             - name: community-node-modules
               mountPath: "/home/node/.n8n/nodes"
               readOnly: false
+          {{- end }}
+          {{- with .Values.taskRunners.external.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- end }}
       {{- with .Values.worker.extraContainers }}
