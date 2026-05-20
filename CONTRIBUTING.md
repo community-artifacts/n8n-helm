@@ -12,27 +12,28 @@ Thanks for taking the time to improve the `community-artifacts/n8n-helm` Helm ch
 ## Branch strategy
 
 ```
-   dev/<topic>  ──┐
-                  ├──→  develop  ──PR──→  main  ──→  Release Charts CI
-   dev/<topic>  ──┘                                  (publish to gh-pages)
-        │                │                │
-        ▼                ▼                ▼
-   Validate Chart   Validate Chart   Release Charts
-   (CI on push)     (CI on push)     (CI on push)
-                    (CI on PR-to-main)
+   dev/<topic>  ──PR──→  develop  ──PR──→  main  ──→  Release Charts CI
+   dev/<topic>  ──PR──→                                (publish to gh-pages)
+                            │                │
+                            ▼                ▼
+                       Validate Chart   Release Charts
+                       (CI on push +    (CI on push)
+                        PR-to-main)
 ```
 
-- **`main` is protected** and is the source of releases. Direct pushes are blocked; the only way `main` advances is a merged PR from `develop`. Every push to `main` triggers [`release.yml`](.github/workflows/release.yml), which packages the chart and publishes it to the `gh-pages` Helm repo.
-- **`develop` is the integration branch.** It is also protected: every push and every PR must show a green **Validate Chart** run before merge. Push directly to `develop` only for small, low-risk maintenance changes; for anything user-visible, open a PR from a `dev/<topic>` branch.
-- **`dev/<topic>`** branches are short-lived feature / fix branches. They trigger the same **Validate Chart** workflow on every push.
+- **`main` is protected** and is the source of releases. Direct pushes are blocked for everyone; the only way `main` advances is a merged PR from `develop`. Every push to `main` triggers [`release.yml`](.github/workflows/release.yml), which packages the chart and publishes it to the `gh-pages` Helm repo.
+- **`develop` is protected and PR-only.** After the initial push that creates the branch, direct pushes are blocked for humans. The only allowed exception is the [`version-bump.yml`](.github/workflows/version-bump.yml) workflow, which uses `GITHUB_TOKEN` to push the auto-computed chart-version bump back onto `develop` while a release PR is open — see the bypass row in the branch-protection table below.
+- **`dev/<topic>`** branches are short-lived feature / fix branches. All chart changes start here. Open a PR from `dev/<topic>` → `develop` once the work is ready; CI runs Validate Chart on every push to the branch and on the PR itself.
 - **`gh-pages`** is managed by CI only — never `git push` to it manually.
 
-Required GitHub branch-protection settings (set once by the maintainer):
+Required GitHub branch-protection settings (set once by the maintainer, under **Settings → Branches → Add rule**):
 
 | Branch | Required status checks (all from Validate Chart) | Other rules |
 |--------|---------------------------------------------------|-------------|
-| `main` | `helm lint`, `helm-unittest`, `Render scenario matrix`, `values.schema.json well-formed`, `kubeconform` | Require PR from `develop`; require linear history; require approval; no force push; no deletion |
-| `develop` | `helm lint`, `helm-unittest`, `Render scenario matrix`, `values.schema.json well-formed` | Require PR for non-maintainer commits; no force push; no deletion |
+| `main` | `helm lint`, `helm-unittest`, `Render scenario matrix`, `values.schema.json well-formed`, `kubeconform` | Require PR (no direct push); require approval; require linear history; no force push; no deletion |
+| `develop` | `helm lint`, `helm-unittest`, `Render scenario matrix`, `values.schema.json well-formed` | Require PR (no direct push); **allow specified actors to bypass required PRs: `github-actions[bot]`** (so the `version-bump.yml` workflow can push the bump commit back onto the PR head); no force push; no deletion |
+
+> **Why the bypass on `develop`?** The release flow opens a PR `develop` → `main`. The `version-bump.yml` workflow detects that PR, computes the next chart version from the conventional-commit log, and pushes a bump commit onto `develop` so the PR carries the right version. Branch protection without the `github-actions[bot]` bypass would block that automated push and require either a second PR (bot → develop) per release, or a manual bump. Listing the GitHub Actions bot in the bypass set keeps the release flow to a single PR while still blocking all human direct pushes.
 
 See [TESTING.md](TESTING.md) for the full list of CI jobs and what each one verifies.
 
@@ -81,7 +82,13 @@ For the complete checklist of what must pass before opening a PR — including t
 ## Pull requests
 
 - **Branch off `develop`, not `main`.** Use `dev/<short-topic>` as the branch name (e.g. `dev/runner-grace-period`). Push to your branch triggers Validate Chart; open the PR with `develop` as the base.
-- Maintainer-only: open a PR from `develop` → `main` once the desired set of changes have landed on `develop` and the latest Validate Chart run is green. The PR is also gated on Validate Chart against `main` (same jobs run once more). On merge, Release Charts on `main` packages and publishes the new chart version.
+- Maintainer-only: open a PR from `develop` → `main` once the desired set of changes have landed on `develop` and the latest Validate Chart run is green. Opening (or syncing) that PR triggers the **Bump chart version** workflow, which:
+  - Reads the conventional-commit log since the last released tag (`n8n-x.y.z`).
+  - Picks the bump level (`feat` → MINOR, anything else → PATCH; `BREAKING CHANGE` is capped at MINOR per the chart-MAJOR-pinned-to-n8n-MAJOR rule).
+  - Updates `charts/n8n/Chart.yaml#version`, regenerates the `artifacthub.io/changes` annotation, and inserts a `## <new-version> (unreleased)` stub heading at the top of `charts/n8n/RELEASE-NOTES.md`.
+  - Pushes the result back onto the PR head (the `develop` branch) with `[skip ci]` so Validate Chart only re-runs once everything is in place.
+  - Comments on the PR with the bump summary.
+- The maintainer's job before merging the release PR is to replace the `<!-- TODO -->` block in `RELEASE-NOTES.md` with the real prose changelog and sanity-check the auto-generated `artifacthub.io/changes` descriptions. On merge of `develop` → `main`, Release Charts on `main` packages and publishes the new chart version.
 - One PR per logical change. A `taskRunners` tweak and an ingress refactor do not belong in the same PR.
 - The chart version is independent SemVer (starting at `2.0.0`). The chart's MAJOR component tracks n8n's MAJOR. MINOR and PATCH bumps are at maintainer discretion when chart-side behavior changes. `Chart.yaml#version` and `Chart.yaml#appVersion` are independent; either can move without the other.
 - **Whenever you bump `appVersion`,** read the n8n release notes for every version between the previous and the new `appVersion`, and apply any hosting-relevant changes (new env vars, deprecations, port or endpoint changes, default-value shifts) in the same PR. The full procedure and the grep recipe are in [AGENTS.md](AGENTS.md#reading-the-n8n-changelog-on-every-binary-bump).
@@ -100,16 +107,29 @@ For the complete checklist of what must pass before opening a PR — including t
 
 Releases are automated, but only `main` triggers them. The full path of a release:
 
-1. **Work on `dev/<topic>`** — push commits, watch the Validate Chart run on each push.
-2. **PR `dev/<topic>` → `develop`** — once Validate Chart is green and the PR is reviewed, merge with squash. Validate Chart runs once more against the merge commit on `develop`.
-3. **PR `develop` → `main`** — when `develop` is in a release-shaped state (Chart.yaml version bumped, RELEASE-NOTES entry added, `artifacthub.io/changes` updated), open this PR. Validate Chart runs against the merge target (`main`); the PR can be merged only after green. Use a **merge commit** here (not squash) so `develop`'s history is preserved.
-4. **Merge to `main`** — triggers [`release.yml`](.github/workflows/release.yml), which runs `chart-releaser-action`:
+1. **Work on `dev/<topic>`.** Push commits with [Conventional Commits](https://www.conventionalcommits.org/) prefixes (`feat:`, `fix:`, `chore:`, …) — the version-bump workflow uses these to pick the correct bump level. Validate Chart runs on every push.
+2. **PR `dev/<topic>` → `develop`.** Once Validate Chart is green and the PR is reviewed, merge with squash. Validate Chart runs once more against the merge commit on `develop`.
+3. **PR `develop` → `main`** when `develop` is release-ready.
+   - Opening (or syncing) this PR triggers the **Bump chart version** workflow. It computes the next chart version, updates `Chart.yaml`, regenerates `artifacthub.io/changes`, inserts a `RELEASE-NOTES.md` stub heading, and pushes those changes onto `develop` with `[skip ci]`.
+   - You then fill in the real RELEASE-NOTES prose under the new heading and review the auto-generated `artifacthub.io/changes` entries. Commit and push (this re-triggers Validate Chart).
+   - Validate Chart runs against the merge target (`main`); the PR can be merged only after green. Use a **merge commit** here (not squash) so `develop`'s history is preserved.
+4. **Merge to `main`** triggers [`release.yml`](.github/workflows/release.yml), which runs `chart-releaser-action`:
    - Packages `charts/n8n` if `Chart.yaml#version` is new.
    - Signs the `.tgz` with the maintainer's GPG key (RSA, see release.yml).
    - Publishes `.tgz` + `.tgz.prov` + updated `index.yaml` to `gh-pages`.
    - Creates a tagged GitHub Release.
 
-You never run `helm package` or push to `gh-pages` manually. If GitHub Pages is not yet enabled on the repo, enable it under **Settings → Pages → Source: `gh-pages`** before the first release.
+You never run `helm package`, `helm template ... > release.yaml`, or push to `gh-pages` manually. If GitHub Pages is not yet enabled on the repo, enable it under **Settings → Pages → Source: `gh-pages`** before the first release.
+
+### Bumping manually
+
+If you need to bypass the automation (e.g., to test the bump script locally before opening the release PR), run:
+
+```bash
+./scripts/bump_chart_version.sh
+```
+
+The script is idempotent — running it twice without new commits is a no-op. It prints the resolved `BUMP_LEVEL`, `PREVIOUS_VERSION`, and `NEW_VERSION` to stdout.
 
 ## Filing issues
 

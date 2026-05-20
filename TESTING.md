@@ -3,15 +3,18 @@
 How contributors validate chart changes locally, and what the CI pipeline
 enforces on every push / PR.
 
-> **Branch strategy in one paragraph.** All work happens on `develop` (the
-> integration branch) or `dev/<topic>` feature branches. Pushes to either
-> trigger the **Validate Chart** GitHub Actions workflow. Releases are cut
-> by opening a PR from `develop` → `main`; merging that PR re-runs
-> validation against `main` (via PR-targeting-main) and, once the merge
-> commit lands on `main`, the **Release Charts** workflow packages the
-> chart and publishes it to the `gh-pages` Helm repository. **Direct
-> pushes to `main` are blocked by branch protection.** See
-> [CONTRIBUTING.md](CONTRIBUTING.md#branch-strategy).
+> **Branch strategy in one paragraph.** All work happens on `dev/<topic>`
+> feature branches. PR `dev/<topic>` → `develop` to integrate. PR
+> `develop` → `main` to release — opening that PR triggers the
+> [version-bump workflow](.github/workflows/version-bump.yml) which
+> computes the next chart version from the conventional-commit log,
+> updates `Chart.yaml`, regenerates `artifacthub.io/changes`, and inserts
+> a `RELEASE-NOTES.md` stub on `develop`. Both `develop` and `main` are
+> branch-protected: **direct pushes are blocked for humans**. The only
+> automated exception is the version-bump bot's push back to `develop`,
+> allowed via the `github-actions[bot]` bypass in develop's protection
+> rule. See [CONTRIBUTING.md](CONTRIBUTING.md#branch-strategy) for the
+> full picture and the exact branch-protection settings.
 
 ---
 
@@ -236,8 +239,9 @@ minikube and leaves PVCs Pending on a multi-node cluster.
 
 | Workflow | Triggered by | Purpose |
 |---------|--------------|---------|
-| `.github/workflows/validate.yml` | push to `develop` / `dev/**`; PR targeting `develop` / `main` | Lint, schema check, unit tests, scenario render, kubeconform, minikube install |
-| `.github/workflows/release.yml`  | push to `main` (i.e., merged PR from `develop`); `workflow_dispatch` | Package chart, sign, publish to `gh-pages`, create GitHub Release |
+| `.github/workflows/validate.yml`    | push to `develop` / `dev/**`; PR targeting `develop` / `main`         | Lint, schema check, unit tests, scenario render, kubeconform, minikube install |
+| `.github/workflows/version-bump.yml`| PR `opened`/`synchronize`/`reopened` targeting `main` from `develop` / `dev/**` | Auto-bump `Chart.yaml#version`, regenerate `artifacthub.io/changes`, insert RELEASE-NOTES stub on the PR head |
+| `.github/workflows/release.yml`     | push to `main` (i.e., merged PR from `develop`); `workflow_dispatch` | Package chart, sign, publish to `gh-pages`, create GitHub Release |
 
 Releasing is fully automatic from `main` — no manual `helm package` or
 `gh-pages` push. See [release.yml](.github/workflows/release.yml) for
