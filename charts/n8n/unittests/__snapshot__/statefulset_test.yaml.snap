@@ -140,6 +140,7 @@ should match snapshot of default values:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:
@@ -249,6 +250,13 @@ should match snapshot of default values:
                 runAsGroup: 1000
                 runAsNonRoot: true
                 runAsUser: 1000
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
+                initialDelaySeconds: 10
+                periodSeconds: 5
               volumeMounts:
                 - mountPath: /home/node/.n8n
                   name: node-modules
@@ -257,6 +265,7 @@ should match snapshot of default values:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
       updateStrategy:
         type: RollingUpdate
       volumeClaimTemplates:
@@ -433,6 +442,7 @@ should match snapshot of postgres ssl certificate values:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:
@@ -550,6 +560,13 @@ should match snapshot of postgres ssl certificate values:
                 runAsGroup: 1000
                 runAsNonRoot: true
                 runAsUser: 1000
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
+                initialDelaySeconds: 10
+                periodSeconds: 5
               volumeMounts:
                 - mountPath: /home/node/.n8n
                   name: node-modules
@@ -570,6 +587,7 @@ should match snapshot of postgres ssl certificate values:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
           volumes:
             - name: pg-ssl-ca
               secret:

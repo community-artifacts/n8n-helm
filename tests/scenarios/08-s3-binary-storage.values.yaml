@@ -1,0 +1,27 @@
+# Scenario 08: S3 binary storage with bundled MinIO.
+# Verifies the binaryData.mode=s3 wiring + MinIO subchart integration
+# (the chart auto-wires the S3 endpoint to the bundled MinIO service).
+
+db:
+  type: postgresdb
+
+postgresql:
+  enabled: true
+
+minio:
+  enabled: true
+  users:
+    - accessKey: minio-access
+      secretKey: minio-secret-key-please-rotate
+      policy: readwrite
+  buckets:
+    - name: n8n-binary
+      policy: none
+      purge: false
+      versioning: false
+
+binaryData:
+  mode: s3
+  availableModes:
+    - filesystem
+    - s3

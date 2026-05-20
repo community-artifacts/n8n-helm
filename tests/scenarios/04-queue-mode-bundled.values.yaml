@@ -1,0 +1,23 @@
+# Scenario 04: Queue mode with bundled Postgres + Valkey.
+# Renders: main Deployment, worker Deployment, webhook Deployment,
+# MCP webhook Deployment, plus the bundled subcharts. PDBs on worker
+# (because count>1) and webhook.
+
+db:
+  type: postgresdb
+
+postgresql:
+  enabled: true
+
+redis:
+  enabled: true
+
+worker:
+  mode: queue
+  count: 2
+
+webhook:
+  mode: queue
+  count: 2
+  mcp:
+    enabled: true

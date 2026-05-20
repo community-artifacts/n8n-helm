@@ -1,0 +1,41 @@
+# Scenario 05: External task-runner sidecar.
+# This is the audit's #1 finding: every taskRunners.external.* knob must
+# apply to the runner sidecar in BOTH Deployment and StatefulSet renders,
+# in BOTH main and worker pods. Exercises image/args/extraEnvVars/
+# securityContext/extraVolumeMounts/launcherConfig overrides.
+
+db:
+  type: postgresdb
+
+postgresql:
+  enabled: true
+
+redis:
+  enabled: true
+
+worker:
+  mode: queue
+  count: 2
+
+webhook:
+  mode: queue
+  count: 2
+
+taskRunners:
+  mode: external
+  external:
+    image:
+      repository: n8nio/runners
+      tag: latest
+    args:
+      - javascript
+      - python
+    extraEnvVars:
+      N8N_RUNNERS_STDLIB_ALLOW: "*"
+      N8N_RUNNERS_EXTERNAL_ALLOW: "*"
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+# The runner is a sidecar; pod-level grace is controlled by the parent role
+# (main/worker), set via main.terminationGracePeriodSeconds etc.

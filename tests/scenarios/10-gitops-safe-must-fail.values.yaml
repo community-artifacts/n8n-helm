@@ -1,0 +1,14 @@
+# Scenario 10: GitOps-safe rendering — NEGATIVE test (fix B).
+# `requireExplicitEncryptionKey: true` AND no encryptionKey AND no
+# existingEncryptionKeySecret AND no live cluster => `helm template`
+# MUST fail with a clear error. The runner script flips its expectation
+# for this scenario (success := template fails with the documented message).
+
+requireExplicitEncryptionKey: true
+# Intentionally no encryptionKey, no existingEncryptionKeySecret.
+
+db:
+  type: postgresdb
+externalPostgresql:
+  host: pg.example.com
+  existingSecret: pg-secret

@@ -303,6 +303,9 @@ main:
   # -- Number of main nodes. Only enterprise license users can have one leader main node and mutiple follower main nodes.
   count: 1
 
+  # -- Pod-level `terminationGracePeriodSeconds` for the main role. This is the K8s-level grace period (kubelet → SIGKILL); it MUST be greater than `.Values.gracefulShutdownTimeout` (the n8n-internal env var) or workflows will be hard-killed before n8n's graceful shutdown can finish. 60s = 30s app shutdown + 30s buffer for queue / connection drains.
+  terminationGracePeriodSeconds: 60
+
   # -- Editor based URL. If it's not defined and ingress definition exists, ingress host will be used.
   editorBaseUrl: ""
 
@@ -339,6 +342,15 @@ main:
     httpGet:
       path: /healthz/readiness
       port: http
+
+  # -- Startup probe for the main pod. n8n cold-start (image pull + DB schema check + listener bind) can exceed the default kubelet 30s window on slower clusters or large `nodes.external.packages` installs; without a startup probe, the liveness probe kicks in too early and the pod crash-loops. `failureThreshold * periodSeconds` (default 150s) caps cold-start budget before liveness takes over.
+  startupProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 30
 
   # -- Force to use statefulset for the main pod. If true, the main pod will be created as a statefulset.
   forceToUseStatefulset: false
@@ -403,6 +415,9 @@ main:
 
 # -- Worker node configurations
 worker:
+  # -- Pod-level `terminationGracePeriodSeconds` for worker pods. Workers can be in the middle of long-running workflows when a rollout / scale-down happens; set this higher than the main role (default 90s) to give the worker more room to finish or hand off in-flight tasks before SIGKILL.
+  terminationGracePeriodSeconds: 90
+
   # -- Use `regular` to use main node as executer, or use `queue` to have worker nodes
   mode: regular
 
@@ -415,9 +430,10 @@ worker:
   # -- If true, all k8s nodes will deploy exatly one worker pod
   allNodes: false
 
-  # -- If true, the number of workers will be automatically scaled based on default metrics. On default, it will scale based on CPU and memory. For more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+  # -- HPA for worker pods. Renders **only** when ALL of these hold; otherwise the HPA resource is silently skipped (no warning, no error). Required:
+  # `worker.autoscaling.enabled: true` AND `db.type: postgresdb` AND `worker.mode: queue` AND `worker.allNodes: false` AND `worker.forceToUseStatefulset: false` AND (`worker.persistence.enabled: false` OR `worker.persistence.accessMode: ReadWriteMany`). HPA on a StatefulSet is technically possible but n8n workers using RWO persistence can't scale beyond 1 — hence the guard.
   autoscaling:
-    # -- Whether autoscaling is enabled.
+    # -- Whether autoscaling is enabled. See the precondition list above; setting this to true alone is not enough.
     enabled: false
 
     # -- The minimum number of replicas.
@@ -460,9 +476,9 @@ worker:
       #     periodSeconds: 15
       #   selectPolicy: Max
 
-  # -- Whether to enable the PodDisruptionBudget for the worker pod
+  # -- PodDisruptionBudget for the worker pod. Renders **only** when ALL of: `worker.pdb.enabled: true` AND `db.type: postgresdb` AND `worker.mode: queue` AND `worker.allNodes: false` AND (`worker.autoscaling.enabled: true` OR `worker.count > 1`). A single fixed worker with autoscaling off produces no PDB.
   pdb:
-    # -- Whether to enable the PodDisruptionBudget
+    # -- Whether to enable the PodDisruptionBudget. See the precondition list above.
     enabled: true
     # -- Minimum number of available replicas
     minAvailable: 1
@@ -496,10 +512,11 @@ worker:
   #   cpu: 2000m
   #   memory: 1Gi
 
-  # -- This is to setup the startup probe for the worker pod more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  # -- Startup probe for the worker pod. The default uses the same HTTP `/healthz` endpoint as livenessProbe so a wedged worker that hasn't reached the queue actually fails startup — the previous `ps aux | grep '[n]8n'` succeeded whenever a process matched and then crashlooped on liveness. Increase `failureThreshold` for clusters with slow image pulls or large `nodes.external.packages` installs. https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
   startupProbe:
-    exec:
-      command: ["/bin/sh", "-c", "ps aux | grep '[n]8n'"]
+    httpGet:
+      path: /healthz
+      port: http
     initialDelaySeconds: 10
     periodSeconds: 5
     failureThreshold: 30
@@ -579,6 +596,9 @@ worker:
 
 # -- Webhook node configurations
 webhook:
+  # -- Pod-level `terminationGracePeriodSeconds` for webhook pods. Aligned with the main role since webhook pods serve external HTTP requests; long-running n8n executions kicked off by a webhook still belong to the worker, not the webhook pod.
+  terminationGracePeriodSeconds: 60
+
   # -- Use `regular` to use main node as webhook node, or use `queue` to have webhook nodes
   mode: regular
 
@@ -593,16 +613,20 @@ webhook:
 
   # -- MCP webhook configuration. This is only used when the webhook mode is set to `queue` and the database type is set to `postgresdb`.
   mcp:
+    # -- Pod-level `terminationGracePeriodSeconds` for the MCP webhook pod.
+    terminationGracePeriodSeconds: 60
+
     # -- Whether to enable MCP webhook
     enabled: true
 
     # -- This block is for setting up the resource management for the mcp webhook pod more information can be found here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     resources: {}
 
-    # -- This is to setup the startup probe for the mcp webhook pod more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+    # -- Startup probe for the MCP webhook pod. HTTP-based for the same reason as the worker probe — a process matching "n8n" doesn't mean MCP webhook routes are live yet. https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
     startupProbe:
-      exec:
-        command: ["/bin/sh", "-c", "ps aux | grep '[n]8n'"]
+      httpGet:
+        path: /healthz
+        port: http
       initialDelaySeconds: 10
       periodSeconds: 5
       failureThreshold: 30
@@ -650,9 +674,9 @@ webhook:
     # -- Host aliases for the mcp webhook pod. For more information checkout: https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/#adding-additional-entries-with-hostaliases
     hostAliases: []
 
-  # -- If true, the number of webhooks will be automatically scaled based on default metrics. On default, it will scale based on CPU. Scale by requests can be done by setting a custom metric. For more information can be found here: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
+  # -- HPA for webhook pods. Renders **only** when ALL of these hold; otherwise the HPA resource is silently skipped (no warning, no error). Required: `webhook.autoscaling.enabled: true` AND `db.type: postgresdb` AND `webhook.mode: queue` AND `webhook.allNodes: false`.
   autoscaling:
-    # -- Whether autoscaling is enabled.
+    # -- Whether autoscaling is enabled. See the precondition list above; setting this to true alone is not enough.
     enabled: false
 
     # -- The minimum number of replicas.
@@ -707,9 +731,9 @@ webhook:
       #     periodSeconds: 15
       #   selectPolicy: Max
 
-  # -- Whether to enable the PodDisruptionBudget for the webhook pod
+  # -- PodDisruptionBudget for the webhook pod. Renders **only** when ALL of: `webhook.pdb.enabled: true` AND `db.type: postgresdb` AND `webhook.mode: queue` AND `webhook.allNodes: false` AND (`webhook.autoscaling.enabled: true` OR `webhook.count > 1`).
   pdb:
-    # -- Whether to enable the PodDisruptionBudget
+    # -- Whether to enable the PodDisruptionBudget. See the precondition list above.
     enabled: true
     # -- Minimum number of available replicas
     minAvailable: 1
@@ -743,10 +767,11 @@ webhook:
   #   cpu: 2000m
   #   memory: 1Gi
 
-  # -- This is to setup the startup probe for the webhook pod more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  # -- Startup probe for the webhook pod. HTTP-based — same rationale as worker / mcp-webhook: the previous `ps aux` match passed before n8n was actually accepting requests. https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
   startupProbe:
-    exec:
-      command: ["/bin/sh", "-c", "ps aux | grep '[n]8n'"]
+    httpGet:
+      path: /healthz
+      port: http
     initialDelaySeconds: 10
     periodSeconds: 5
     failureThreshold: 30
@@ -926,11 +951,67 @@ workflowHistory:
   # -- Time (in hours) to keep workflow history versions for. To disable it, use -1 as a value
   pruneTime: 336
 
-# -- If you install n8n first time, you can keep this empty and it will be auto generated and never change again. If you already have a encryption key generated before, please use it here.
+# -- Encryption key (n8n `N8N_ENCRYPTION_KEY`). On a fresh `helm install` against a live cluster, leaving this empty triggers one-time auto-generation; the key is then persisted in the Secret `<release>-n8n-encryption-key-secret-v2` (annotated `helm.sh/resource-policy: keep` so it survives `helm uninstall`). For GitOps deployments (Argo CD / Flux / `helm template`) the chart cannot read the existing Secret at render time and would silently regenerate the key on every reconcile — see `requireExplicitEncryptionKey` below. For production, set this to a stable 32-char hex string (committed only via Sealed Secrets / External Secrets Operator / SOPS).
+# -- Arbitrary additional Kubernetes manifests rendered into the release. Each list item is a complete YAML mapping (no Helm templating applied — see `extraTemplateManifests` for that). Useful for NetworkPolicies more specific than `networkPolicy.*` covers, CronJobs that operate on n8n data, ExternalSecret resources from ESO, and similar one-off resources.
+# Example:
+#   extraManifests:
+#     - apiVersion: v1
+#       kind: ConfigMap
+#       metadata:
+#         name: extra-config
+#       data:
+#         foo: bar
+# -- NetworkPolicy for n8n pods. Off by default since n8n workflows commonly hit arbitrary external endpoints by design — enable when your cluster requires explicit allow-lists. Renders one NetworkPolicy per active role (main; worker and webhook when their `mode: queue` is set). Default posture: ingress from same-namespace pods + optional ingress-controller selector; egress to DNS, in-cluster Postgres / Redis / S3 derived from the chart's own `db.type`, `*.mode`, `binaryData.availableModes` settings. Extend via `additionalEgressRules` for outbound webhook targets.
+networkPolicy:
+  # -- Enable the NetworkPolicy resources.
+  enabled: false
+  # -- Allow ingress from any pod in the same namespace (typical web-app posture; turn off if you want explicit selectors only).
+  ingressFromSameNamespace: true
+  # -- Optional namespaceSelector for the ingress-controller namespace. If set, traffic from pods in that namespace matching `ingressPodSelector` is allowed.
+  ingressNamespaceSelector: {}
+  # ingressNamespaceSelector:
+  #   matchLabels:
+  #     kubernetes.io/metadata.name: ingress-nginx
+  # -- Optional podSelector for the ingress controller pods. Used together with `ingressNamespaceSelector`.
+  ingressPodSelector: {}
+  # ingressPodSelector:
+  #   matchLabels:
+  #     app.kubernetes.io/name: ingress-nginx
+  # -- Additional ingress rules merged into every role's NetworkPolicy. Each item is a full networkingv1 ingress rule.
+  additionalIngressRules: []
+  # -- Additional egress rules merged into every role's NetworkPolicy. Use for outbound webhook destinations, external APIs that n8n workflows must reach, telemetry endpoints, etc.
+  additionalEgressRules: []
+  # additionalEgressRules:
+  #   - to:
+  #       - ipBlock:
+  #           cidr: 0.0.0.0/0
+  #           except:
+  #             - 169.254.0.0/16
+  #     ports:
+  #       - protocol: TCP
+  #         port: 443
+
+extraManifests: []
+
+# -- Same as `extraManifests`, but each entry is a multi-line YAML string passed through `tpl` so it can reference chart values, includes, and conditionals.
+# Example:
+#   extraTemplateManifests:
+#     - |
+#       apiVersion: v1
+#       kind: ConfigMap
+#       metadata:
+#         name: {{ include "n8n.fullname" . }}-tpl-config
+#       data:
+#         release: {{ .Release.Name | quote }}
+extraTemplateManifests: []
+
 encryptionKey: ""
 
-# -- The name of an existing secret with encryption key. The secret must contain a key with the name N8N_ENCRYPTION_KEY.
+# -- The name of an existing secret with encryption key. The secret must contain a key with the name N8N_ENCRYPTION_KEY. Recommended for GitOps and any production setup — the secret is managed out-of-band so the chart never touches the key material.
 existingEncryptionKeySecret: ""
+
+# -- **STRONGLY RECOMMENDED FOR PRODUCTION AND GITOPS.** When true, `helm template` / Argo CD / Flux renders that cannot reach the cluster will FAIL the template if neither `encryptionKey` nor `existingEncryptionKeySecret` is set, instead of silently regenerating the key on every reconcile (which re-encrypts and bricks every stored credential in n8n). Defaults to **false** so the chart's own unit-test fixtures (which render without a live cluster) keep passing; toggle to true in any real deployment that does not pin `encryptionKey` / `existingEncryptionKeySecret`. Live `helm install` / `helm upgrade` against a real cluster are unaffected by this flag — the lookup succeeds either way.
+requireExplicitEncryptionKey: false
 
 # -- For instance, the Schedule node uses it to know at what time the workflow should start. Find you timezone from here: https://momentjs.com/timezone/
 timezone: "Europe/Berlin"
@@ -1033,10 +1114,12 @@ resources: {}
   #   cpu: 2000m
   #   memory: 1Gi
 
-# -- DEPRECATED: Use main, worker, and webhook blocks livenessProbe field instead. This field will be removed in a future release.
+# -- DEPRECATED: Use `main.livenessProbe` / `worker.livenessProbe` / `webhook.livenessProbe` blocks instead. This field will be removed in a future release.
+# Precedence: per-role probe wins over this root field. Merge is shallow — setting any key under a per-role probe replaces this entire map for that role.
 livenessProbe: {}
 
-# -- DEPRECATED: Use main, worker, and webhook blocks readinessProbe field instead. This field will be removed in a future release.
+# -- DEPRECATED: Use `main.readinessProbe` / `worker.readinessProbe` / `webhook.readinessProbe` blocks instead. This field will be removed in a future release.
+# Precedence: per-role probe wins over this root field. Merge is shallow — setting any key under a per-role probe replaces this entire map for that role.
 readinessProbe: {}
 
 # -- DEPRECATED: Use main, worker, and webhook blocks volumes fields instead. This field will be removed in a future release.
@@ -1149,7 +1232,7 @@ externalPostgresql:
   host: ""
   # -- External PostgreSQL username
   username: "postgres"
-  # -- External PostgreSQL password
+  # -- External PostgreSQL password — **NOT RECOMMENDED FOR PRODUCTION.** Setting this inline writes the cleartext password into the rendered manifest, the Helm release history, the Argo CD application diff, and anywhere a `helm template | git commit` flow lands. Prefer `existingSecret` below: manage the credential out-of-band (Sealed Secrets / ESO / SOPS / Vault) and let the chart reference it.
   password: ""
   # -- External PostgreSQL server port
   port: 5432

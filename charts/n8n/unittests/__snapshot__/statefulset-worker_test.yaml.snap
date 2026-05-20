@@ -176,6 +176,7 @@ should match snapshot of default values:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:
@@ -330,12 +331,10 @@ should match snapshot of default values:
                 runAsNonRoot: true
                 runAsUser: 1000
               startupProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - ps aux | grep '[n]8n'
                 failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
                 initialDelaySeconds: 10
                 periodSeconds: 5
               volumeMounts:
@@ -346,6 +345,7 @@ should match snapshot of default values:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 90
       updateStrategy:
         type: RollingUpdate
       volumeClaimTemplates:
@@ -539,6 +539,7 @@ should match snapshot of postgres ssl certificate values:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:
@@ -693,12 +694,10 @@ should match snapshot of postgres ssl certificate values:
                 runAsNonRoot: true
                 runAsUser: 1000
               startupProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - ps aux | grep '[n]8n'
                 failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
                 initialDelaySeconds: 10
                 periodSeconds: 5
               volumeMounts:
@@ -721,6 +720,7 @@ should match snapshot of postgres ssl certificate values:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 90
           volumes:
             - name: pg-ssl-ca
               secret:
@@ -929,6 +929,7 @@ should match snapshot of worker persistence:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:

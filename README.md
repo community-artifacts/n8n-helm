@@ -54,9 +54,20 @@ Already shipped in the current chart version:
 Planned:
 
 - **KEDA** — `ScaledObject` for worker scaling driven by Redis queue depth (currently only CPU/memory HPA is wired up).
-- **NetworkPolicy presets** — opinionated defaults beyond the existing one rendered in queue mode.
 - **OpenTelemetry integration** — first-class env wiring for the OTel collector endpoint.
 - **Externalized config** — option to back the whole `*-configmap` set with a single user-provided ConfigMap / Secret reference.
+
+## Status
+
+This chart is **beta**. It is in active use by the community-artifacts maintainers but the wider adoption surface is small (single-digit forks/stars as of this writing), and chart-side breaking changes still occasionally land in MINOR bumps within the same n8n MAJOR (see `charts/n8n/RELEASE-NOTES.md`). The chart MAJOR version tracks the n8n binary MAJOR — see [CONTRIBUTING.md](CONTRIBUTING.md) for the versioning rule.
+
+What this means for adopters:
+
+- **Production deployments work** — every release renders cleanly against `helm lint`, passes ~770 unit-test assertions, and ships a `values.schema.json` that validates `--set` flags client-side. We use this chart ourselves.
+- **Pin versions explicitly** — `helm install n8n community-artifacts/n8n --version <X.Y.Z>` rather than tracking `latest`. The chart sees iterative MINOR / PATCH bumps when n8n ships hosting-relevant changes or when chart-side defaults need to shift.
+- **Read `RELEASE-NOTES.md` before upgrading** — every chart version has a corresponding entry calling out Added / Changed / Fixed / Removed items, including any rendered-output deltas.
+- **GitOps users should pin `encryptionKey` or `existingEncryptionKeySecret` and set `requireExplicitEncryptionKey: true`** — the chart will fail-loud rather than silently regenerate the key on every reconcile.
+- **Issues and PRs welcome.** Real-world adoption signals (issues / questions / feature requests) feed the prioritisation that drives version bumps.
 
 ## License
 

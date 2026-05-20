@@ -27,3 +27,25 @@
 !!! We detected deprecated root level {{ $field }} configuration usage. Please consider using main, worker, and webhook blocks {{ $field }} fields instead. This field will be removed in a future release.
   {{- end }}
 {{- end }}
+{{/* Surface configurations where HPA / PDB resources were requested but their preconditions are not met, so the silently-skipped resource doesn't surprise the operator. */}}
+{{- if .Values.worker.autoscaling.enabled }}
+  {{- if or (ne .Values.db.type "postgresdb") (ne .Values.worker.mode "queue") .Values.worker.allNodes .Values.worker.forceToUseStatefulset (and .Values.worker.persistence.enabled (ne .Values.worker.persistence.accessMode "ReadWriteMany")) }}
+!!! worker.autoscaling.enabled is true but the worker HPA was NOT rendered. Requires: db.type=postgresdb, worker.mode=queue, worker.allNodes=false, worker.forceToUseStatefulset=false, and either worker.persistence.enabled=false or worker.persistence.accessMode=ReadWriteMany. See values.yaml for the full precondition list.
+  {{- end }}
+{{- end }}
+{{- if .Values.webhook.autoscaling.enabled }}
+  {{- if or (ne .Values.db.type "postgresdb") (ne .Values.webhook.mode "queue") .Values.webhook.allNodes }}
+!!! webhook.autoscaling.enabled is true but the webhook HPA was NOT rendered. Requires: db.type=postgresdb, webhook.mode=queue, webhook.allNodes=false.
+  {{- end }}
+{{- end }}
+{{/* PDB warnings only fire when the role is in queue mode — under default `regular` mode the PDB is intentionally not rendered, no warning needed. */}}
+{{- if and .Values.worker.pdb.enabled (eq .Values.worker.mode "queue") }}
+  {{- if or (ne .Values.db.type "postgresdb") .Values.worker.allNodes (and (not .Values.worker.autoscaling.enabled) (le (int .Values.worker.count) 1)) }}
+!!! worker.pdb.enabled is true but the worker PodDisruptionBudget was NOT rendered. Requires: db.type=postgresdb, worker.allNodes=false, AND either worker.autoscaling.enabled=true or worker.count > 1.
+  {{- end }}
+{{- end }}
+{{- if and .Values.webhook.pdb.enabled (eq .Values.webhook.mode "queue") }}
+  {{- if or (ne .Values.db.type "postgresdb") .Values.webhook.allNodes (and (not .Values.webhook.autoscaling.enabled) (le (int .Values.webhook.count) 1)) }}
+!!! webhook.pdb.enabled is true but the webhook PodDisruptionBudget was NOT rendered. Requires: db.type=postgresdb, webhook.allNodes=false, AND either webhook.autoscaling.enabled=true or webhook.count > 1.
+  {{- end }}
+{{- end }}

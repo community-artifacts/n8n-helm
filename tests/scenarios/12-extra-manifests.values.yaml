@@ -1,0 +1,19 @@
+# Scenario 12: extraManifests + extraTemplateManifests escape hatch (fix J).
+
+extraManifests:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: extra-plain-config
+    data:
+      hello: world
+
+extraTemplateManifests:
+  - |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: {{ include "n8n.fullname" . }}-tpl-config
+    data:
+      release: {{ .Release.Name | quote }}
+      namespace: {{ .Release.Namespace | quote }}

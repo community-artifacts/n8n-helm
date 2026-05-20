@@ -293,12 +293,10 @@ should match snapshot of postgres ssl certificate values:
                 runAsNonRoot: true
                 runAsUser: 1000
               startupProbe:
-                exec:
-                  command:
-                    - /bin/sh
-                    - -c
-                    - ps aux | grep '[n]8n'
                 failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
                 initialDelaySeconds: 10
                 periodSeconds: 5
               volumeMounts:
@@ -318,6 +316,7 @@ should match snapshot of postgres ssl certificate values:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
           volumes:
             - name: pg-ssl-ca
               secret:

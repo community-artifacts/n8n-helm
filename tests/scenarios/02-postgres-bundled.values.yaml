@@ -1,0 +1,17 @@
+# Scenario 02: Bundled PostgreSQL (cloudpirates/postgres) + main Deployment.
+# Verifies the subchart wiring: secret host/port references resolve to the
+# rendered subchart name, env vars consume the right secret keys, persistence
+# is requested on the main pod.
+
+db:
+  type: postgresdb
+
+postgresql:
+  enabled: true
+  auth:
+    database: n8n
+
+main:
+  persistence:
+    enabled: true
+    size: 1Gi
