@@ -4,6 +4,10 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
+## 2.2.3
+
+- **Fixed**: Stop setting the deprecated `N8N_RUNNERS_ENABLED` environment variable. n8n logs `N8N_RUNNERS_ENABLED -> Remove this environment variable; it is no longer needed.` on startup when it is set — task runners are always enabled on supported n8n versions, and the env var is now a no-op. Removed from `templates/configmap.yaml` (the task-broker ConfigMap consumed via `envFrom` by main / worker / statefulset workloads), `templates/deployment-webhook.yaml`, and `templates/deployment-mcp-webhook.yaml`. Matching unit-test assertions inverted to `notExists` / `notContains` guards so a regression that re-introduces the var would fail CI; snapshots regenerated. Behavior-only fix — no values changed.
+
 ## 2.2.2
 
 - **Added**: GPG provenance signing for chart releases. `chart-releaser-action` now imports the maintainer's private key from the `CR_GPG_KEY` / `CR_GPG_PASSPHRASE` / `CR_GPG_KEY_NAME` secrets and publishes a `.tgz.prov` file alongside every chart `.tgz`. Artifact Hub auto-detects the provenance file and displays the "Signed" badge on the chart's page.
