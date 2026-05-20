@@ -105,7 +105,26 @@ For the complete checklist of what must pass before opening a PR — including t
 
 ## Release process
 
-Releases are automated, but only `main` triggers them. The full path of a release:
+Releases are fully automated; the maintainer's only manual touchpoint is the changelog prose. Two paths reach `main`, both end at the Release Charts workflow:
+
+### Automatic (nightly cron) — default path
+
+[`.github/workflows/scheduled-release.yml`](.github/workflows/scheduled-release.yml) runs at `02:00 UTC` daily. It:
+
+1. Counts commits on `develop` ahead of `main`.
+   - `0` → exits, no PR.
+   - `1..4` → PATCH bump.
+   - `≥ 5` → MINOR bump.
+2. Calls `./scripts/bump_chart_version.sh --level <patch|minor>` to bump `Chart.yaml`, regenerate `artifacthub.io/changes`, and insert the `RELEASE-NOTES.md` stub.
+3. Commits the bump on `develop` with `[skip ci]`.
+4. Opens (or re-uses) the PR `develop` → `main`, labels it `bot/release`, and enables auto-merge with the **merge commit** strategy (preserving `develop`'s history).
+5. Validate Chart runs on the PR. When it goes green and any required reviews are in place, auto-merge lands the PR on `main`, which triggers Release Charts to package, sign, and publish to `gh-pages`.
+
+You can replace the `<!-- TODO -->` marker in `RELEASE-NOTES.md` with prose changelog any time before auto-merge fires. The per-PR `version-bump.yml` workflow recognizes the `bot/release` label and stays out of the way (otherwise it would double-bump).
+
+### Manual — for ad-hoc / urgent releases
+
+The full path of a manual release:
 
 1. **Work on `dev/<topic>`.** Push commits with [Conventional Commits](https://www.conventionalcommits.org/) prefixes (`feat:`, `fix:`, `chore:`, …) — the version-bump workflow uses these to pick the correct bump level. Validate Chart runs on every push.
 2. **PR `dev/<topic>` → `develop`.** Once Validate Chart is green and the PR is reviewed, merge with squash. Validate Chart runs once more against the merge commit on `develop`.

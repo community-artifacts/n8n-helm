@@ -239,9 +239,10 @@ minikube and leaves PVCs Pending on a multi-node cluster.
 
 | Workflow | Triggered by | Purpose |
 |---------|--------------|---------|
-| `.github/workflows/validate.yml`    | push to `develop` / `dev/**`; PR targeting `develop` / `main`         | Lint, schema check, unit tests, scenario render, kubeconform, minikube install |
-| `.github/workflows/version-bump.yml`| PR `opened`/`synchronize`/`reopened` targeting `main` from `develop` / `dev/**` | Auto-bump `Chart.yaml#version`, regenerate `artifacthub.io/changes`, insert RELEASE-NOTES stub on the PR head |
-| `.github/workflows/release.yml`     | push to `main` (i.e., merged PR from `develop`); `workflow_dispatch` | Package chart, sign, publish to `gh-pages`, create GitHub Release |
+| `.github/workflows/validate.yml`         | push to `develop` / `dev/**`; PR targeting `develop` / `main`         | Lint, schema check, unit tests, scenario render, kubeconform, minikube install |
+| `.github/workflows/version-bump.yml`     | PR `opened`/`synchronize`/`reopened` targeting `main` from `develop` / `dev/**`, **unless** the PR has the `bot/release` label | Auto-bump `Chart.yaml#version`, regenerate `artifacthub.io/changes`, insert RELEASE-NOTES stub on the PR head |
+| `.github/workflows/scheduled-release.yml`| `cron: '0 2 * * *'` (02:00 UTC daily) + `workflow_dispatch` | If `develop` ahead of `main`: bump (>4 commits → MINOR, else PATCH), open release PR labelled `bot/release`, enable auto-merge |
+| `.github/workflows/release.yml`          | push to `main` (i.e., merged PR from `develop`); `workflow_dispatch`  | Package chart, sign, publish to `gh-pages`, create GitHub Release |
 
 Releasing is fully automatic from `main` — no manual `helm package` or
 `gh-pages` push. See [release.yml](.github/workflows/release.yml) for

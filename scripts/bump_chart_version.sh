@@ -25,8 +25,40 @@
 #
 # Usage (local):  ./scripts/bump_chart_version.sh
 # Usage (CI):     ./scripts/bump_chart_version.sh   (then commit + push)
+#
+# Flags:
+#   --level <patch|minor>   Force the bump level. Skips the conventional-
+#                           commit classification and uses the supplied
+#                           level. Used by the scheduled-release cron,
+#                           which derives the level from the *count* of
+#                           commits on develop ahead of main (> 4 →
+#                           minor, else patch) rather than commit
+#                           prefixes. Changelog entries are still
+#                           regenerated from the commit log.
+#
 
 set -euo pipefail
+
+force_level=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --level)
+      force_level="$2"
+      case "$force_level" in
+        patch|minor) ;;
+        *) echo "--level must be 'patch' or 'minor', got: $force_level" >&2; exit 64 ;;
+      esac
+      shift 2
+      ;;
+    -h|--help)
+      sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2; exit 64
+      ;;
+  esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -141,6 +173,13 @@ cap_entries changelog_fixed
 cap_entries changelog_changed
 
 # ---- 3. Compute target version --------------------------------------------
+# A forced level (from --level) overrides whatever the conventional-commit
+# parser found. The classifier still ran so the per-kind buckets are
+# populated for the changelog regeneration below.
+if [[ -n "$force_level" ]]; then
+  bump_level="$force_level"
+fi
+
 case "$bump_level" in
   minor) new_ver="${last_major}.$((last_minor + 1)).0" ;;
   patch) new_ver="${last_major}.${last_minor}.$((last_patch + 1))" ;;
