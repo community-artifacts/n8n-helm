@@ -31,6 +31,26 @@ _See [helm install](https://helm.sh/docs/helm/helm_install/) for command documen
 
 > **Tip**: Search all available chart versions using `helm search repo community-artifacts -l`. Please don't forget to run `helm repo update` before the command.
 
+## Verifying the Chart
+
+Releases from `2.2.1` onwards are GPG-signed by the maintainer. Each release ships a `.tgz.prov` provenance file next to the chart `.tgz`, and Artifact Hub displays a "Signed" badge on the chart's page once a signed release has been indexed.
+
+To verify locally before installing:
+
+```console
+# 1. Fetch and import the public key
+curl -fsSL https://raw.githubusercontent.com/community-artifacts/n8n-helm/main/pubkey.gpg \
+  | gpg --import
+gpg --export > ~/.gnupg/pubring.gpg          # legacy keyring helm/cr expect
+
+# 2. Install with verification
+helm install n8n community-artifacts/n8n --verify
+```
+
+`helm install --verify` will refuse to proceed unless the chart's `.prov` file is present and the signature validates against the imported public key. To inspect a chart without installing, use `helm verify <path-to-tgz>`.
+
+The public key is published in this repo at [`pubkey.gpg`](https://github.com/community-artifacts/n8n-helm/blob/main/pubkey.gpg).
+
 ## Full Example
 
 > **Tip**:

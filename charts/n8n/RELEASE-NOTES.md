@@ -4,6 +4,13 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
+## 2.2.2
+
+- **Added**: GPG provenance signing for chart releases. `chart-releaser-action` now imports the maintainer's private key from the `CR_GPG_KEY` / `CR_GPG_PASSPHRASE` / `CR_GPG_KEY_NAME` secrets and publishes a `.tgz.prov` file alongside every chart `.tgz`. Artifact Hub auto-detects the provenance file and displays the "Signed" badge on the chart's page.
+- **Added**: Public key committed at the repo root as [`pubkey.gpg`](https://github.com/community-artifacts/n8n-helm/blob/main/pubkey.gpg) so consumers can `helm install --verify` against signed releases.
+- **Added**: New `Verifying the Chart` section in the chart README walking through key import and `helm install --verify`.
+- **Note**: `chart-releaser` is built on Go's deprecated `golang.org/x/crypto/openpgp`, which only supports RSA and DSA keys. Ed25519 / Curve25519 keys (OpenPGP public-key algorithm `22`) will fail packaging with `openpgp: unsupported feature: public key type: 22`. Generate the signing key with `Key-Type: RSA` / `Key-Length: 4096`.
+
 ## 2.2.1
 
 - **Added**: Per-version changelog surfaced on the chart's [Artifact Hub](https://artifacthub.io/) page via the `artifacthub.io/changes` annotation in `Chart.yaml`. Every version bump from this release onwards must populate the annotation with structured `kind` + `description` entries describing the changes since the previous version. Past tgz files (2.2.0, 2.1.1, 2.1.0) cannot be retro-annotated — their Artifact Hub changelog will appear empty.

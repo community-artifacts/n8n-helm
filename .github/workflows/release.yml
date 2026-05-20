@@ -33,6 +33,44 @@ jobs:
           helm repo add minio https://charts.min.io/
           helm repo update
 
+      # Provenance signing for Artifact Hub's "Signed" badge.
+      # Requires these GitHub secrets to be set on the repo:
+      #   - CR_GPG_KEY         ASCII-armored private key, base64-encoded
+      #                        (gpg --armor --export-secret-keys <KEY_ID> | base64 -w0)
+      #   - CR_GPG_PASSPHRASE  Passphrase for the private key
+      #   - CR_GPG_KEY_NAME    UID (name/email) matching the key, e.g.
+      #                        `community-artifacts` or `<user>@users.noreply.github.com`
+      # The job will fail loudly if the secrets are missing — set them before
+      # the next push to `main`, or temporarily comment this step + the
+      # CR_SIGN env block on the chart-releaser step.
+      - name: Set up GPG signing
+        env:
+          CR_GPG_KEY: ${{ secrets.CR_GPG_KEY }}
+          CR_GPG_PASSPHRASE: ${{ secrets.CR_GPG_PASSPHRASE }}
+        run: |
+          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+          printf '%s' "$CR_GPG_KEY" | base64 -d | gpg --batch --import
+          # Diagnostic: show the algorithm of every imported secret key.
+          # Field 4 of `sec:` lines per OpenPGP RFC 4880: 1 = RSA, 17 = DSA,
+          # 19 = ECDSA, 22 = EdDSA (Ed25519). `cr` only accepts 1 or 17 —
+          # anything else fails with "openpgp: unsupported feature: public
+          # key type: N". This step never prints the key material itself.
+          echo "Imported secret-key algorithms:"
+          gpg --list-secret-keys --with-colons \
+            | awk -F: '/^sec/{algo=$4; print "  algo="algo" ("(algo==1?"RSA":algo==17?"DSA":algo==22?"Ed25519":"other")")"}'
+          if gpg --list-secret-keys --with-colons | awk -F: '/^sec/{exit ($4==1 || $4==17)?0:1}'; then
+            :
+          else
+            echo "::error::No RSA/DSA secret key in CR_GPG_KEY — cr cannot sign with the current key. Regenerate the key with Key-Type: RSA, Key-Length: 4096 and re-upload."
+            exit 1
+          fi
+          # `cr` (used by chart-releaser-action) needs the legacy secring.gpg
+          # format; GnuPG 2.1+ stopped writing it by default, so export it.
+          gpg --batch --pinentry-mode loopback --passphrase "$CR_GPG_PASSPHRASE" \
+              --export-secret-keys > ~/.gnupg/secring.gpg
+          printf '%s' "$CR_GPG_PASSPHRASE" > ~/.gnupg/passphrase
+          chmod 600 ~/.gnupg/secring.gpg ~/.gnupg/passphrase
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         with:
@@ -40,3 +78,7 @@ jobs:
           skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_SIGN: "true"
+          CR_KEY: ${{ secrets.CR_GPG_KEY_NAME }}
+          CR_KEYRING: /home/runner/.gnupg/secring.gpg
+          CR_PASSPHRASE_FILE: /home/runner/.gnupg/passphrase

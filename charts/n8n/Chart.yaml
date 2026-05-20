@@ -7,7 +7,7 @@ description: |-
   (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage,
   multi-main, webhook processors, ServiceMonitor).
 type: application
-version: 2.2.1
+version: 2.2.2
 appVersion: 2.21.4
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/community-artifacts/n8n-helm
@@ -56,4 +56,8 @@ annotations:
   # Spec: https://artifacthub.io/docs/topics/annotations/helm/
   artifacthub.io/changes: |
     - kind: added
-      description: Per-version changelog now surfaced on Artifact Hub via the `artifacthub.io/changes` annotation. Future releases will populate it with structured entries.
+      description: GPG provenance signing — releases now ship a `.tgz.prov` file alongside the chart `.tgz`, so Artifact Hub displays the "Signed" badge and `helm install --verify` works against the published public key.
+    - kind: added
+      description: Public key (`pubkey.gpg`) committed at the repo root for client-side verification.
+    - kind: added
+      description: New `Verifying the Chart` section in the chart README with `helm install --verify` instructions.
