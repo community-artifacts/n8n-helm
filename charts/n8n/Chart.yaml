@@ -55,25 +55,7 @@ annotations:
   # added | changed | deprecated | removed | fixed | security.
   # Spec: https://artifacthub.io/docs/topics/annotations/helm/
   artifacthub.io/changes: |
-    - kind: fixed
-      description: External task-runner sidecar now honours `taskRunners.external.{image,args,extraEnvVars}` overrides in StatefulSet renders (main multi-main and worker). Previously the sidecar in those workloads was hardcoded to `.Values.image.repository:tag` and `args: ["javascript"]`, silently ignoring user overrides — extracting the sidecar into a `_helpers.tpl` partial eliminates the drift.
     - kind: added
-      description: `requireExplicitEncryptionKey` (default false) — when true, `helm template` / GitOps renders without a live cluster will FAIL the template if neither `encryptionKey` nor `existingEncryptionKeySecret` is set, instead of silently regenerating the key on every reconcile. Encryption-key Secret now also carries `helm.sh/resource-policy: keep` so it survives `helm uninstall`.
-    - kind: added
-      description: Pod-level `terminationGracePeriodSeconds` per role — `main.terminationGracePeriodSeconds`, `worker.terminationGracePeriodSeconds`, `webhook.terminationGracePeriodSeconds`, `webhook.mcp.terminationGracePeriodSeconds`. Defaults aligned with `gracefulShutdownTimeout` (60-90s) so n8n's graceful-shutdown env var isn't truncated by the kubelet's default 30s grace period.
-    - kind: added
-      description: `extraManifests` / `extraTemplateManifests` escape hatch at the chart's top level for arbitrary additional Kubernetes resources (NetworkPolicies, CronJobs, ExternalSecret, etc.) without needing a sibling chart.
-    - kind: added
-      description: `networkPolicy.enabled` (default false) — opt-in NetworkPolicy per active role with sensible egress defaults (DNS + in-cluster Postgres / Redis / S3 derived from the rest of the chart's values) and `additionalIngressRules` / `additionalEgressRules` extension points.
+      description: "chart hardening sweep (2.4.0)"
     - kind: changed
-      description: Default `startupProbe` for worker / webhook / mcp-webhook is now `httpGet /healthz` instead of `exec ["ps aux | grep '[n]8n'"]`. The previous match-on-process probe passed before the pod was actually serving, causing crash-loops on liveness; the HTTP probe matches the existing liveness endpoint and supports a longer `failureThreshold` for cold starts.
-    - kind: fixed
-      description: Main role now ships a default `startupProbe` (httpGet /healthz, 150s budget). Without it, slow cold starts on real clusters tripped the tight liveness probe (1s timeout, 3 failures) and the kubelet SIGTERMed the pod before n8n bound its HTTP port. Surfaced by live minikube validation of 2.4.0.
-    - kind: changed
-      description: HPA / PDB precondition combinations that previously silently skipped the resource now emit a `!!!`-prefixed warning in `helm install` NOTES output naming the missing prerequisites — no more "I set `worker.autoscaling.enabled: true` and nothing happened".
-    - kind: fixed
-      description: Top-level `/LICENSE` aligned to Apache-2.0 (matches `charts/n8n/LICENSE`, Chart.yaml annotation, and README). Previously the repo root carried GPL-3.0 while everything else stated Apache-2.0.
-    - kind: changed
-      description: Chart README now has a `Bundled subchart details` section naming the actual upstreams behind the `redis`/`postgresql`/`minio` value aliases (Valkey 9, CloudPirates Postgres 18, MinIO) so operators can evaluate the supply chain.
-    - kind: changed
-      description: `externalPostgresql.password` value now carries a prominent comment warning against the inline pattern (cleartext password ends up in rendered manifests / Helm release history / GitOps diff) and recommending `existingSecret` for production.
+      description: "scrub remaining 'audit' references"
