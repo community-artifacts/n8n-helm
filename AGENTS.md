@@ -145,7 +145,7 @@ What to look for and how to react:
 | Queue / multi-main / runner protocol change | Cross-check the templates that wire `worker.mode=queue`, `main.count`, and `taskRunners.*`. |
 | Pure node-package / UI-only change | No chart action; mention in RELEASE-NOTES as appVersion-only. |
 
-Record the audit outcome in the same `## <chart-version>` RELEASE-NOTES section. If the bump genuinely required zero chart changes, say so explicitly ("Audited n8n 2.21.5..2.21.7 release notes; no hosting-relevant changes").
+Record the review outcome in the same `## <chart-version>` RELEASE-NOTES section. If the bump genuinely required zero chart changes, say so explicitly ("Reviewed n8n 2.21.5..2.21.7 release notes; no hosting-relevant changes").
 
 ## Work in progress
 

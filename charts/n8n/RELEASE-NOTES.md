@@ -6,7 +6,7 @@ For every n8n binary bump (`appVersion`), the maintainer reads the n8n release n
 
 ## 2.4.0
 
-External audit + influence-chart sweep. All changes are additive — no values keys removed, no rendered-output regressions for existing installs, no `appVersion` bump (still n8n `2.21.4`). Existing release upgrades pick up bugfixes + new opt-in features without further config.
+Chart hardening sweep + influence-chart review. All changes are additive — no values keys removed, no rendered-output regressions for existing installs, no `appVersion` bump (still n8n `2.21.4`). Existing release upgrades pick up bugfixes + new opt-in features without further config.
 
 ### Fixed
 

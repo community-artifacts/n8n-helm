@@ -1,5 +1,5 @@
 # Scenario 05: External task-runner sidecar.
-# This is the audit's #1 finding: every taskRunners.external.* knob must
+# #1 finding: every taskRunners.external.* knob must
 # apply to the runner sidecar in BOTH Deployment and StatefulSet renders,
 # in BOTH main and worker pods. Exercises image/args/extraEnvVars/
 # securityContext/extraVolumeMounts/launcherConfig overrides.

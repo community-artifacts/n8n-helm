@@ -1,9 +1,10 @@
 # Scenario 06: Multi-main HA (StatefulSet kind).
 # Triggers the kind auto-flip: main.count>1 + RWO persistence forces the chart
 # to render as StatefulSet rather than Deployment. This is the scenario where
-# the audit's #1 finding bit hardest — the runner sidecar in the StatefulSet
-# used to silently ignore the taskRunners.external.* overrides. After fix A,
-# the rendered StatefulSet sidecar should match what the Deployment renders.
+# the runner-sidecar regression bit hardest — the runner sidecar in the
+# StatefulSet used to silently ignore the taskRunners.external.* overrides.
+# After the helper extraction, the rendered StatefulSet sidecar matches what
+# the Deployment renders.
 
 db:
   type: postgresdb
