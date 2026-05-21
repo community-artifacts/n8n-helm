@@ -55,5 +55,7 @@ annotations:
   # added | changed | deprecated | removed | fixed | security.
   # Spec: https://artifacthub.io/docs/topics/annotations/helm/
   artifacthub.io/changes: |
+    - kind: changed
+      description: "fill 2.4.1 RELEASE-NOTES stub with hotfix entry"
     - kind: fixed
       description: "quote artifacthub.io/changes descriptions in Chart.yaml"
