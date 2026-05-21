@@ -5,7 +5,8 @@ enforces on every push / PR.
 
 > **Branch strategy in one paragraph.** All work happens on topic
 > branches named `dev/<topic>` (general), `feat/<topic>` (new
-> functionality), or `hotfix/<topic>` (fast-tracked bug fixes). PR
+> functionality), `fix/<topic>` (regular bug fixes), or
+> `hotfix/<topic>` (urgent bug fixes — fast-tracked release path). PR
 > `<topic-branch>` → `develop` to integrate. PR
 > `develop` → `main` to release — opening that PR triggers the
 > [version-bump workflow](.github/workflows/version-bump.yml) which
@@ -136,8 +137,8 @@ secrets for `existingSecret`-based scenarios, runs `helm install --wait
 
 ## Required tests for every change
 
-Before opening a PR (from `dev/<topic>` → `develop` or `develop` →
-`main`):
+Before opening a PR (from `dev/<topic>` / `feat/<topic>` /
+`fix/<topic>` / `hotfix/<topic>` → `develop`, or `develop` → `main`):
 
 1. **Lint clean.** `helm lint charts/n8n` must report `0 chart(s) failed`.
 2. **All unit tests pass.** No flaky / silenced tests; if a test fails,
@@ -241,8 +242,8 @@ minikube and leaves PVCs Pending on a multi-node cluster.
 
 | Workflow | Triggered by | Purpose |
 |---------|--------------|---------|
-| `.github/workflows/validate.yml`         | push to `develop`; PR opened/synced/reopened targeting `develop` / `main`                                       | Lint, schema check, unit tests, scenario render, kubeconform, minikube install. Topic branches (`dev/**` / `feat/**` / `hotfix/**`) only trigger CI **once a PR into `develop` is open** — pre-PR commits run locally only. |
-| `.github/workflows/version-bump.yml`     | PR `opened`/`synchronize`/`reopened` targeting `main` from `develop` / `dev/**` / `feat/**` / `hotfix/**`, **unless** the PR has the `bot/release` label | Auto-bump `Chart.yaml#version`, regenerate `artifacthub.io/changes`, insert RELEASE-NOTES stub on the PR head |
+| `.github/workflows/validate.yml`         | push to `develop`; PR opened/synced/reopened targeting `develop` / `main`                                                | Lint, schema check, unit tests, scenario render, kubeconform, minikube install. Topic branches (`dev/**` / `feat/**` / `fix/**` / `hotfix/**`) only trigger CI **once a PR into `develop` is open** — pre-PR commits run locally only. |
+| `.github/workflows/version-bump.yml`     | PR `opened`/`synchronize`/`reopened` targeting `main` from `develop` / `dev/**` / `feat/**` / `fix/**` / `hotfix/**`, **unless** the PR has the `bot/release` label | Auto-bump `Chart.yaml#version`, regenerate `artifacthub.io/changes`, insert RELEASE-NOTES stub on the PR head |
 | `.github/workflows/scheduled-release.yml`| `cron: '0 2 * * *'` (02:00 UTC daily) + `workflow_dispatch`           | If `develop` ahead of `main`: run [Bumpy](improvements/bumpy.md) via `scripts/bumpy_decide.sh`, bump accordingly (MAJOR capped at MINOR), open release PR labelled `bot/release`, enable auto-merge |
 | `.github/workflows/hotfix-release.yml`   | push to `develop` whose tip commit subject matches a hotfix marker     | Same as scheduled-release but fired immediately; opens PR titled `Hotfix X.Y.Z` with `bot/release` + `hotfix` labels |
 | `.github/workflows/release.yml`          | push to `main` (i.e., merged PR from `develop`); `workflow_dispatch`  | Package chart, sign, publish to `gh-pages`, create GitHub Release |

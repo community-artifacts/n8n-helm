@@ -71,7 +71,7 @@ What this means for adopters:
 
 ## Contributing
 
-PRs target the **`develop`** branch — `main` is reserved for releases and direct pushes are blocked. Work on a topic branch (`dev/<topic>` / `feat/<topic>` / `hotfix/<topic>`); **opening the PR into `develop`** kicks off the **Validate Chart** CI workflow (`helm lint`, schema cross-check, ~770 unit-test assertions, scenario matrix, kubeconform, minikube smoke install), which re-runs on every subsequent push that updates the PR. Pre-PR commits don't burn runner minutes — iterate locally with `helm lint` + `helm unittest` + `./scripts/run_scenarios.sh`. Releases ship by opening a PR `develop` → `main`; merging triggers the chart-releaser pipeline.
+PRs target the **`develop`** branch — `main` is reserved for releases and direct pushes are blocked. Work on a topic branch (`dev/<topic>` / `feat/<topic>` / `fix/<topic>` / `hotfix/<topic>`); **opening the PR into `develop`** kicks off the **Validate Chart** CI workflow (`helm lint`, schema cross-check, ~770 unit-test assertions, scenario matrix, kubeconform, minikube smoke install), which re-runs on every subsequent push that updates the PR. Pre-PR commits don't burn runner minutes — iterate locally with `helm lint` + `helm unittest` + `./scripts/run_scenarios.sh`. Releases ship by opening a PR `develop` → `main`; merging triggers the chart-releaser pipeline.
 
 - [TESTING.md](TESTING.md) — testing layers, the `tests/scenarios/` matrix, local minikube setup, what CI enforces.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — branch strategy, PR checklist, release process, commit-message conventions.

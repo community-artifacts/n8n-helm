@@ -13,7 +13,8 @@ Thanks for taking the time to improve the `community-artifacts/n8n-helm` Helm ch
 
 ```
    dev/<topic>     ──PR──→
-   feat/<topic>    ──PR──→  develop  ──PR──→  main  ──→  Release Charts CI
+   feat/<topic>    ──PR──→
+   fix/<topic>     ──PR──→  develop  ──PR──→  main  ──→  Release Charts CI
    hotfix/<topic>  ──PR──→     │                │      (publish to gh-pages)
                                ▼                ▼
                          Validate Chart    Release Charts
@@ -26,7 +27,8 @@ Thanks for taking the time to improve the `community-artifacts/n8n-helm` Helm ch
 - **Topic branches feeding `develop`** — chart work starts on a short-lived branch named after its kind. Validate Chart runs **the moment you open a PR from the branch into `develop`** (and re-runs on every subsequent push while the PR is open, via the `synchronize` event). Pre-PR commits do not trigger CI on their own — run the same checks locally via `helm lint` + `helm unittest` + `./scripts/run_scenarios.sh` while you iterate. Pick the prefix that matches the change:
   - **`dev/<topic>`** — general / refactor / docs / chore work (the default).
   - **`feat/<topic>`** — new functionality (Conventional `feat:` commits → MINOR bump under the manual path).
-  - **`hotfix/<topic>`** — fast-tracked bug fixes. When the squashed merge into `develop` lands with a `hotfix:` (or `[HOTFIX]`) commit subject, `hotfix-release.yml` opens the release PR immediately instead of waiting for the cron; see [Release process](#release-process) below.
+  - **`fix/<topic>`** — regular non-urgent bug fixes. Ships in the next nightly cron release alongside whatever else is on `develop`.
+  - **`hotfix/<topic>`** — urgent bug fixes. When the squashed merge into `develop` lands with a `hotfix:` (or `[HOTFIX]`) commit subject, `hotfix-release.yml` opens the release PR immediately instead of waiting for the cron; see [Release process](#release-process) below.
 - **`gh-pages`** is managed by CI only — never `git push` to it manually.
 
 Required GitHub branch-protection settings (set once by the maintainer, under **Settings → Branches → Add rule**):
@@ -84,7 +86,7 @@ For the complete checklist of what must pass before opening a PR — including t
 
 ## Pull requests
 
-- **Branch off `develop`, not `main`.** Pick a prefix based on the change: `dev/<short-topic>` for general / refactor / chore work, `feat/<short-topic>` for new functionality, `hotfix/<short-topic>` for fast-tracked bug fixes. Examples: `dev/runner-grace-period`, `feat/keda-scaler`, `hotfix/runner-image-tag-typo`. CI engages **when you open the PR** with `develop` as the base (and re-runs on every push that updates the PR head); pre-PR commits don't burn runner minutes — iterate locally with `helm lint` / `helm unittest` / `./scripts/run_scenarios.sh`.
+- **Branch off `develop`, not `main`.** Pick a prefix based on the change: `dev/<short-topic>` for general / refactor / chore work, `feat/<short-topic>` for new functionality, `fix/<short-topic>` for regular bug fixes, `hotfix/<short-topic>` for urgent bug fixes that should ship immediately. Examples: `dev/runner-grace-period`, `feat/keda-scaler`, `fix/probe-timeout-default`, `hotfix/runner-image-tag-typo`. CI engages **when you open the PR** with `develop` as the base (and re-runs on every push that updates the PR head); pre-PR commits don't burn runner minutes — iterate locally with `helm lint` / `helm unittest` / `./scripts/run_scenarios.sh`.
 - Maintainer-only: open a PR from `develop` → `main` once the desired set of changes have landed on `develop` and the latest Validate Chart run is green. Opening (or syncing) that PR triggers the **Bump chart version** workflow, which:
   - Reads the conventional-commit log since the last released tag (`n8n-x.y.z`).
   - Picks the bump level (`feat` → MINOR, anything else → PATCH; `BREAKING CHANGE` is capped at MINOR per the chart-MAJOR-pinned-to-n8n-MAJOR rule).
@@ -136,7 +138,7 @@ Non-hotfix pushes to `develop` are ignored by this workflow (Bumpy still runs ni
 
 The full path of a manual release:
 
-1. **Work on `dev/<topic>` / `feat/<topic>` / `hotfix/<topic>`.** Push commits with [Conventional Commits](https://www.conventionalcommits.org/) prefixes (`feat:`, `fix:`, `hotfix:`, `chore:`, …) — the version-bump workflow uses these to pick the correct bump level. Validate Chart runs on every push.
+1. **Work on `dev/<topic>` / `feat/<topic>` / `fix/<topic>` / `hotfix/<topic>`.** Push commits with [Conventional Commits](https://www.conventionalcommits.org/) prefixes (`feat:`, `fix:`, `hotfix:`, `chore:`, …) — the version-bump workflow uses these to pick the correct bump level. Validate Chart fires when you open the PR (not on bare topic-branch pushes).
 2. **PR `<branch>` → `develop`.** Once Validate Chart is green and the PR is reviewed, merge with squash. Validate Chart runs once more against the merge commit on `develop`. If the squashed commit subject starts with `hotfix:` (or contains `[HOTFIX]`), the **hotfix release** path fires automatically — skip step 3.
 3. **PR `develop` → `main`** when `develop` is release-ready.
    - Opening (or syncing) this PR triggers the **Bump chart version** workflow. It computes the next chart version, updates `Chart.yaml`, regenerates `artifacthub.io/changes`, inserts a `RELEASE-NOTES.md` stub heading, and pushes those changes onto `develop` with `[skip ci]`.

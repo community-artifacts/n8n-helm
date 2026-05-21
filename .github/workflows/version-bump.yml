@@ -1,11 +1,12 @@
 name: Bump chart version on develop → main PR
 
-# Fires only on a pull_request from `develop` (or `dev/**`) targeting
-# `main`. Computes the chart-version bump from conventional commits in
-# the PR, applies it to Chart.yaml / RELEASE-NOTES.md / the
-# artifacthub.io/changes annotation, and pushes the result back onto
-# the PR head branch with `[skip ci]` so the rest of the chart-CI
-# (Validate Chart) doesn't loop on the bot commit.
+# Fires only on a pull_request from `develop` (or any of the topic
+# prefixes that land on develop: `dev/**`, `feat/**`, `fix/**`,
+# `hotfix/**`) targeting `main`. Computes the chart-version bump from
+# conventional commits in the PR, applies it to Chart.yaml /
+# RELEASE-NOTES.md / the artifacthub.io/changes annotation, and pushes
+# the result back onto the PR head branch with `[skip ci]` so the rest
+# of the chart-CI (Validate Chart) doesn't loop on the bot commit.
 #
 # The bot only touches:
 #   - charts/n8n/Chart.yaml#version
@@ -32,8 +33,8 @@ permissions:
 
 jobs:
   bump:
-    # Only auto-bump on PRs from develop or dev/** / feat/** / hotfix/**
-    # (i.e., release PRs into main).
+    # Only auto-bump on PRs from develop or dev/** / feat/** / fix/** /
+    # hotfix/** (i.e., release PRs into main).
     # Skip PRs already labelled `bot/release` — those were opened by
     # `scheduled-release.yml`, which has already done its own bump and
     # committed it on develop. Running this workflow on top would be a
@@ -43,6 +44,7 @@ jobs:
       (github.event.pull_request.head.ref == 'develop' ||
        startsWith(github.event.pull_request.head.ref, 'dev/') ||
        startsWith(github.event.pull_request.head.ref, 'feat/') ||
+       startsWith(github.event.pull_request.head.ref, 'fix/') ||
        startsWith(github.event.pull_request.head.ref, 'hotfix/'))
       && !contains(github.event.pull_request.labels.*.name, 'bot/release')
     runs-on: ubuntu-latest
