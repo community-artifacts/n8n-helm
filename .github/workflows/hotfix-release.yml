@@ -54,17 +54,23 @@ jobs:
           subj=$(git log -1 --format=%s HEAD)
           body=$(git log -1 --format=%b HEAD)
           echo "Tip subject: $subj"
+          # Regexes via grep — `[[ =~ ]]` with literal-paren escapes is
+          # brittle across bash versions (the runner failed to parse
+          # `^hotfix(\([^)]+\))?:`).
           is_hotfix=false
-          # Skip the bot's own commits — the previous successful release
-          # left a "chore(release):" commit on develop that we must not
-          # treat as a new hotfix trigger.
-          if [[ "$subj" == chore\(release\):* ]]; then
+          if printf '%s' "$subj" | grep -qE '^chore\(release\):'; then
             echo "Tip is a release bookkeeping commit; ignoring."
-          elif [[ "$subj" =~ ^hotfix(\([^)]+\))?:[[:space:]] ]] \
-            || [[ "$subj" =~ ^fix!?(\([^)]+\))?:[[:space:]] && "$body" == *hotfix* ]] \
-            || [[ "$subj" == *"[HOTFIX]"* ]] \
-            || [[ "$body" == *"HOTFIX:"* ]]; then
+          elif printf '%s' "$subj" | grep -qE '^hotfix(\([^)]+\))?:[[:space:]]'; then
             is_hotfix=true
+          elif printf '%s' "$subj" | grep -qF '[HOTFIX]'; then
+            is_hotfix=true
+          elif printf '%s' "$subj" | grep -qE '^fix(\([^)]+\))?!?:[[:space:]]' \
+            && printf '%s' "$body" | grep -qi 'hotfix'; then
+            is_hotfix=true
+          elif printf '%s' "$body" | grep -qE '^HOTFIX:'; then
+            is_hotfix=true
+          fi
+          if [[ "$is_hotfix" == "true" ]]; then
             echo "::notice::Hotfix marker detected on the tip commit."
           fi
           echo "is_hotfix=$is_hotfix" >> "$GITHUB_OUTPUT"
