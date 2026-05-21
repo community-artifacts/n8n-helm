@@ -1,0 +1,14 @@
+# Scenario 09: GitOps-safe rendering (fix B).
+# When `requireExplicitEncryptionKey: true` is set, the chart MUST fail
+# the template under `helm template` (no live cluster) unless one of
+# {encryptionKey, existingEncryptionKeySecret} is provided. This scenario
+# provides `encryptionKey`, so it should render successfully.
+
+requireExplicitEncryptionKey: true
+encryptionKey: "deadbeefdeadbeefdeadbeefdeadbeef"
+
+db:
+  type: postgresdb
+externalPostgresql:
+  host: pg.example.com
+  existingSecret: pg-secret

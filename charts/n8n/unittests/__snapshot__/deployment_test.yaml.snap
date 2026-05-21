@@ -233,10 +233,18 @@ should match snapshot of default values:
                 runAsGroup: 1000
                 runAsNonRoot: true
                 runAsUser: 1000
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
+                initialDelaySeconds: 10
+                periodSeconds: 5
           securityContext:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
   11: |
     apiVersion: v1
     data:
@@ -244,6 +252,7 @@ should match snapshot of default values:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:
@@ -490,6 +499,13 @@ should match snapshot of main persistence:
                 runAsGroup: 1000
                 runAsNonRoot: true
                 runAsUser: 1000
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
+                initialDelaySeconds: 10
+                periodSeconds: 5
               volumeMounts:
                 - mountPath: /home/node/.n8n
                   name: node-modules
@@ -498,6 +514,7 @@ should match snapshot of main persistence:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
           volumes:
             - name: node-modules
               persistentVolumeClaim:
@@ -509,6 +526,7 @@ should match snapshot of main persistence:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:
@@ -757,6 +775,13 @@ should match snapshot of main persistence with multiple main node and mode read 
                 runAsGroup: 1000
                 runAsNonRoot: true
                 runAsUser: 1000
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
+                initialDelaySeconds: 10
+                periodSeconds: 5
               volumeMounts:
                 - mountPath: /home/node/.n8n
                   name: node-modules
@@ -765,6 +790,7 @@ should match snapshot of main persistence with multiple main node and mode read 
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
           volumes:
             - name: node-modules
               persistentVolumeClaim:
@@ -776,6 +802,7 @@ should match snapshot of main persistence with multiple main node and mode read 
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:
@@ -1040,6 +1067,13 @@ should match snapshot of postgres ssl certificate values:
                 runAsGroup: 1000
                 runAsNonRoot: true
                 runAsUser: 1000
+              startupProbe:
+                failureThreshold: 30
+                httpGet:
+                  path: /healthz
+                  port: http
+                initialDelaySeconds: 10
+                periodSeconds: 5
               volumeMounts:
                 - mountPath: /home/node/certs/ca/ca.crt
                   name: pg-ssl-ca
@@ -1057,6 +1091,7 @@ should match snapshot of postgres ssl certificate values:
             fsGroup: 1000
             fsGroupChangePolicy: OnRootMismatch
           serviceAccountName: n8n
+          terminationGracePeriodSeconds: 60
           volumes:
             - name: pg-ssl-ca
               secret:
@@ -1096,6 +1131,7 @@ should match snapshot of postgres ssl certificate values:
     kind: Secret
     metadata:
       annotations:
+        helm.sh/resource-policy: keep
         meta.helm.sh/release-name: n8n
         meta.helm.sh/release-namespace: n8n
       labels:

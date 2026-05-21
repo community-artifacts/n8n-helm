@@ -51,6 +51,22 @@ helm install n8n community-artifacts/n8n --verify
 
 The public key is published in this repo at [`pubkey.gpg`](https://github.com/community-artifacts/n8n-helm/blob/main/pubkey.gpg).
 
+## Bundled subchart details
+
+When `postgresql.enabled` or `redis.enabled` is set, the chart pulls in two third-party subcharts. The `redis` and `postgresql` keys are Helm aliases; the actual subcharts behind them are not Bitnami's. Knowing the real upstream matters for supply-chain review and compliance.
+
+| Values key (alias) | Real subchart | Upstream project | Repository | App version shipped |
+|--------------------|---------------|------------------|------------|---------------------|
+| `postgresql.*` | [`cloudpirates/postgres`](https://artifacthub.io/packages/helm/cloudpirates-postgres/postgres) | PostgreSQL | `oci://registry-1.docker.io/cloudpirates` | PostgreSQL **18.3** (StatefulSet, official `postgres` image) |
+| `redis.*` | [`valkey/valkey`](https://github.com/valkey-io/valkey-helm) | Valkey (Linux Foundation Redis fork, wire-compatible) | `https://valkey.io/valkey-helm` | Valkey **9.x** |
+| `minio.*` | [`minio/minio`](https://artifacthub.io/packages/helm/minio-official/minio) | MinIO | `https://charts.min.io/` | MinIO upstream |
+
+Why these and not Bitnami's: the Bitnami free Helm repository was deprecated in 2025; this chart switched to actively maintained, community-friendly alternatives. The Valkey project is the Redis fork incubated under the Linux Foundation after the Redis license change. CloudPirates publishes a StatefulSet-based Postgres chart that tracks the official `postgres` image.
+
+If your environment has policies against any of these (for example, you need a managed Postgres or a Redis-license install), set the corresponding `.enabled: false` and supply connection details via `externalPostgresql.*` / `externalRedis.*` instead — see the dedicated sections below.
+
+Chart releases from `2.2.2` onwards are GPG-signed. See the **Verifying the Chart** section above for `helm install --verify` setup.
+
 ## Full Example
 
 > **Tip**:

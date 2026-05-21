@@ -1,0 +1,5 @@
+# Scenario 01: Defaults — single Deployment, SQLite, no queue, no external task runner.
+# Purpose: ensure the "zero-flags" install renders cleanly and is the minimal
+# baseline. This is the install path most quick-start users hit first.
+#
+# (Empty overrides: rely entirely on chart defaults.)

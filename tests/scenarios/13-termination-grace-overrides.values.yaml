@@ -1,0 +1,23 @@
+# Scenario 13: terminationGracePeriodSeconds overrides per role (fix E).
+# Verifies each role's pod-spec terminationGracePeriodSeconds is wired from
+# the corresponding values key, including the MCP webhook subkey.
+
+main:
+  terminationGracePeriodSeconds: 120
+
+worker:
+  mode: queue
+  terminationGracePeriodSeconds: 300
+
+webhook:
+  mode: queue
+  terminationGracePeriodSeconds: 90
+  mcp:
+    terminationGracePeriodSeconds: 75
+
+db:
+  type: postgresdb
+postgresql:
+  enabled: true
+redis:
+  enabled: true

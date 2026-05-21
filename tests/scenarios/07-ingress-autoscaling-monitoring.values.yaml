@@ -1,0 +1,57 @@
+# Scenario 07: Full external surface — Ingress + HPA + PDB + ServiceMonitor +
+# PodMonitor, queue mode, external Postgres/Redis via secrets.
+# This is the "real production knobs" scenario; renders the widest variety
+# of resources at once.
+
+db:
+  type: postgresdb
+
+postgresql:
+  enabled: false
+externalPostgresql:
+  host: pg.example.com
+  username: n8nuser
+  database: n8n
+  existingSecret: ext-pg-secret
+
+redis:
+  enabled: false
+externalRedis:
+  host: redis.example.com
+  existingSecret: ext-redis-secret
+
+worker:
+  mode: queue
+  count: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+  pdb:
+    enabled: true
+
+webhook:
+  mode: queue
+  count: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+  pdb:
+    enabled: true
+
+main:
+  pdb:
+    enabled: true
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: n8n.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+serviceMonitor:
+  enabled: true

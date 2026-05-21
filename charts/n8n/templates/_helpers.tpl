@@ -550,3 +550,113 @@ Check if volumeMounts should be included to MCP webhook. If the context is not p
 {{- end -}}
 {{- $hasVolumeMounts -}}
 {{- end -}}
+
+{{/*
+External task-runner sidecar container.
+
+Single source of truth — all four workload templates (deployment.yaml,
+deployment-worker.yaml, statefulset.yaml, statefulset-worker.yaml) include
+this so the runner sidecar always honours every taskRunners.external.*
+override (image, args, extraEnvVars, securityContext, extraVolumeMounts,
+launcherConfig) regardless of whether the chart renders as Deployment or
+StatefulSet.
+
+Call with:
+  {{ include "n8n.taskRunnerSidecar" (dict "ctx" $ "role" "main")    | nindent 8 }}
+  {{ include "n8n.taskRunnerSidecar" (dict "ctx" $ "role" "worker")  | nindent 8 }}
+
+The `role` selects:
+  - which persistence block to read (main.persistence / worker.persistence)
+  - which secret key to mount as N8N_RUNNERS_AUTH_TOKEN
+    (main → auth-token, worker → worker-auth-token).
+*/}}
+{{- define "n8n.taskRunnerSidecar" -}}
+{{- $ctx := .ctx -}}
+{{- $role := .role -}}
+{{- $persistence := (index $ctx.Values $role).persistence -}}
+{{- $secretKey := ternary "worker-auth-token" "auth-token" (eq $role "worker") -}}
+- name: {{ template "n8n.taskRunners.name" $ctx }}
+  securityContext:
+    {{- toYaml (default $ctx.Values.securityContext $ctx.Values.taskRunners.external.securityContext) | nindent 4 }}
+  {{- if $ctx.Values.taskRunners.external.image }}
+  image: "{{ $ctx.Values.taskRunners.external.image.repository | default $ctx.Values.image.repository }}:{{ $ctx.Values.taskRunners.external.image.tag | default $ctx.Values.image.tag | default $ctx.Chart.AppVersion }}"
+  imagePullPolicy: {{ $ctx.Values.taskRunners.external.image.pullPolicy | default $ctx.Values.image.pullPolicy }}
+  {{- else }}
+  image: "{{ $ctx.Values.image.repository }}:{{ $ctx.Values.image.tag | default $ctx.Chart.AppVersion }}"
+  imagePullPolicy: {{ $ctx.Values.image.pullPolicy }}
+  {{- end }}
+  command: ["/usr/local/bin/task-runner-launcher"]
+  args:
+    {{- if $ctx.Values.taskRunners.external.args }}
+    {{- toYaml $ctx.Values.taskRunners.external.args | nindent 4 }}
+    {{- else }}
+    - javascript
+    {{- end }}
+  ports:
+    - name: task-runner
+      containerPort: {{ $ctx.Values.taskRunners.external.port }}
+      protocol: TCP
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: task-runner
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: task-runner
+  resources:
+    {{- toYaml $ctx.Values.taskRunners.external.resources | nindent 4 }}
+  env:
+    - name: N8N_RUNNERS_AUTH_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: {{ template "n8n.taskRunners.fullname" $ctx }}-secret
+          key: {{ $secretKey }}
+  {{- if $ctx.Values.nodes.builtin.enabled }}
+    - name: NODE_FUNCTION_ALLOW_BUILTIN
+      value: {{ if $ctx.Values.nodes.builtin.modules }}{{ join "," $ctx.Values.nodes.builtin.modules }}{{ else }}"*"{{ end }}
+  {{- end }}
+  {{- if $ctx.Values.nodes.external.allowAll }}
+    - name: NODE_FUNCTION_ALLOW_EXTERNAL
+      value: "*"
+  {{- else if $ctx.Values.nodes.external.packages }}
+    - name: NODE_FUNCTION_ALLOW_EXTERNAL
+      value: {{ include "n8n.packageNames" $ctx.Values.nodes.external.packages | quote }}
+  {{- end }}
+  {{- if $ctx.Values.nodes.external.reinstallMissingPackages }}
+    - name: N8N_REINSTALL_MISSING_PACKAGES
+      value: "true"
+  {{- end }}
+  {{- range $k, $v := $ctx.Values.taskRunners.external.extraEnvVars }}
+    - name: {{ $k }}
+      value: {{ $v | quote }}
+  {{- end }}
+  envFrom:
+    - configMapRef:
+        name: {{ template "n8n.taskRunners.fullname" $ctx }}-configmap
+  {{- if or $ctx.Values.nodes.external.packages $persistence.enabled $ctx.Values.taskRunners.external.extraVolumeMounts $ctx.Values.taskRunners.external.launcherConfig }}
+  volumeMounts:
+  {{- end }}
+  {{- if or $ctx.Values.nodes.external.packages $persistence.enabled }}
+    - name: {{ default "node-modules" $persistence.volumeName }}
+      mountPath: {{ $persistence.mountPath }}
+      {{- if $persistence.subPath }}
+      subPath: {{ $persistence.subPath }}
+      {{- end }}
+      readOnly: false
+  {{- end }}
+  {{- if $ctx.Values.nodes.external.packages }}
+    - name: community-node-modules
+      mountPath: "/home/node/.n8n/nodes"
+      readOnly: false
+  {{- end }}
+  {{- if $ctx.Values.taskRunners.external.launcherConfig }}
+    - name: task-runners-launcher-config
+      mountPath: /etc/n8n-task-runners.json
+      subPath: n8n-task-runners.json
+      readOnly: true
+  {{- end }}
+  {{- with $ctx.Values.taskRunners.external.extraVolumeMounts }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end -}}

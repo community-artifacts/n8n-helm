@@ -1407,11 +1407,18 @@ tests:
             done
         template: deployment-mcp-webhook.yaml
 
-  - it: should use startupProbe to wait n8n process ready
+  - it: should use httpGet /healthz startupProbe so a wedged MCP webhook fails startup rather than passing ps-aux and crashlooping on liveness
     asserts:
       - equal:
-          path: spec.template.spec.containers[?(@.name == "n8n-mcp-webhook")].startupProbe.exec.command
-          value: ["/bin/sh", "-c", "ps aux | grep '[n]8n'"]
+          path: spec.template.spec.containers[?(@.name == "n8n-mcp-webhook")].startupProbe.httpGet.path
+          value: /healthz
+        template: deployment-mcp-webhook.yaml
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-mcp-webhook")].startupProbe.httpGet.port
+          value: http
+        template: deployment-mcp-webhook.yaml
+      - notExists:
+          path: spec.template.spec.containers[?(@.name == "n8n-mcp-webhook")].startupProbe.exec
         template: deployment-mcp-webhook.yaml
       - equal:
           path: spec.template.spec.containers[?(@.name == "n8n-mcp-webhook")].startupProbe.initialDelaySeconds

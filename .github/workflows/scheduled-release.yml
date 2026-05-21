@@ -1,0 +1,184 @@
+name: Scheduled release
+
+# Nightly auto-release using the Bumpy quantity-based SemVer strategy
+# (improvements/bumpy.md). Once a day at 02:00 UTC the job:
+#   1. Skips if `develop` has no commits ahead of `main`.
+#   2. Calls scripts/bumpy_decide.sh to compute the bump level from the
+#      *size* of changes since the last `n8n-X.0.0` baseline:
+#        - high churn (> 10%) AND low net (< 5%) → PATCH (refactor)
+#        - net ≥ 15%  → MINOR (raw MAJOR is capped — chart MAJOR is
+#                              pinned to n8n's MAJOR; see CONTRIBUTING.md)
+#        - net ≥ 5%   → MINOR
+#        - else       → PATCH
+#      A `BREAKING CHANGE:` marker in any commit body raises the floor
+#      to MINOR (still capped — never raises MAJOR on the chart side).
+#   3. Bumps `charts/n8n/Chart.yaml#version`, regenerates the
+#      `artifacthub.io/changes` annotation, and inserts a
+#      `RELEASE-NOTES.md` stub heading.
+#   4. Commits the bump on `develop` with `[skip ci]` (so the Validate
+#      Chart workflow only runs once, on the PR).
+#   5. Opens (or re-uses) a PR `develop` → `main` titled `Release X.Y.Z`,
+#      tagged with the `bot/release` label so the per-PR
+#      version-bump workflow knows to no-op on it.
+#   6. Enables auto-merge on the PR. The PR merges as soon as the
+#      Validate Chart workflow comes back green; merging to `main`
+#      triggers the Release Charts workflow which packages, signs,
+#      and publishes the chart to gh-pages.
+#
+# The maintainer's only remaining job is to (optionally) replace the
+# auto-generated `RELEASE-NOTES.md` TODO marker with prose changelog
+# *before* the PR's Validate Chart run completes; auto-merge will hold
+# until both Validate Chart is green and any required-review condition
+# is satisfied (set up in branch protection on `main`).
+
+on:
+  schedule:
+    # 02:00 UTC every day — picked to land while Europe is asleep and the
+    # GitHub Actions queue is least loaded. Adjust freely.
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  PR_LABEL: bot/release     # version-bump.yml skips PRs carrying this label.
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check whether develop is ahead of main
+        id: ahead
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          n=$(git rev-list --count origin/main..HEAD)
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          if (( n == 0 )); then
+            echo "level=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip — develop already at main
+        if: steps.ahead.outputs.count == '0'
+        run: |
+          echo "::notice::develop is 0 commits ahead of main — no release today."
+
+      - name: Decide bump level (Bumpy)
+        if: steps.ahead.outputs.count != '0'
+        id: decide
+        run: |
+          ./scripts/bumpy_decide.sh | tee /tmp/bumpy.out
+          {
+            grep -E '^(LEVEL|NET_PCT|CHURN_PCT|ADDED|REMOVED|BASELINE|BASELINE_SIZE|BREAKING)=' /tmp/bumpy.out \
+              | awk -F= '{print tolower($1)"="$2}'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Configure git author
+        if: steps.ahead.outputs.count != '0'
+        run: |
+          git config user.name  "n8n-helm[bot]"
+          git config user.email "n8n-helm-bot@users.noreply.github.com"
+
+      - name: Bump chart version (forced level)
+        if: steps.ahead.outputs.count != '0'
+        id: bump
+        run: |
+          ./scripts/bump_chart_version.sh --level "${{ steps.decide.outputs.level }}" | tee /tmp/bump.out
+          {
+            grep -E '^(BUMP_LEVEL|PREVIOUS_VERSION|NEW_VERSION|CHANGED)=' /tmp/bump.out \
+              | awk -F= '{print tolower($1)"="$2}'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit + push bump (if anything changed)
+        if: steps.ahead.outputs.count != '0' && steps.bump.outputs.changed == 'true'
+        run: |
+          git add charts/n8n/Chart.yaml charts/n8n/RELEASE-NOTES.md
+          git diff --cached
+          git commit -m "chore(release): scheduled bump to ${{ steps.bump.outputs.new_version }} [skip ci]
+
+          Triggered by .github/workflows/scheduled-release.yml on $(date -u +%Y-%m-%d).
+
+          Bumpy decision:
+          - Commits on develop ahead of main: ${{ steps.ahead.outputs.count }}
+          - Baseline:                         ${{ steps.decide.outputs.baseline }} (${{ steps.decide.outputs.baseline_size }} lines)
+          - Net change %:                     ${{ steps.decide.outputs.net_pct }}%
+          - Churn %:                          ${{ steps.decide.outputs.churn_pct }}%
+          - BREAKING CHANGE marker present:   ${{ steps.decide.outputs.breaking }}
+          - Bump level applied:               ${{ steps.bump.outputs.bump_level }}
+          - Previous version:                 ${{ steps.bump.outputs.previous_version }}
+          - New version:                      ${{ steps.bump.outputs.new_version }}"
+          git push origin HEAD:develop
+
+      - name: Ensure release label exists
+        if: steps.ahead.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "${{ env.PR_LABEL }}" \
+            --description "PR opened by the scheduled-release workflow; version-bump.yml skips PRs with this label." \
+            --color "fbca04" 2>/dev/null || true
+
+      - name: Open (or re-use) release PR
+        if: steps.ahead.outputs.count != '0'
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          new_ver="${{ steps.bump.outputs.new_version }}"
+          # An open develop→main PR already exists? Re-use it; the bump
+          # commit we pushed above is already on develop, so the PR is
+          # updated automatically.
+          existing=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number // empty')
+          if [[ -n "$existing" ]]; then
+            echo "Re-using existing release PR #$existing."
+            echo "number=$existing" >> "$GITHUB_OUTPUT"
+            gh pr edit "$existing" --add-label "${{ env.PR_LABEL }}" || true
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head develop \
+            --label "${{ env.PR_LABEL }}" \
+            --title "Release ${new_ver}" \
+            --body "$(cat <<EOF
+          Scheduled release PR — opened by \`.github/workflows/scheduled-release.yml\` at $(date -u +%Y-%m-%dT%H:%MZ).
+
+          | | |
+          |---|---|
+          | Commits on develop ahead of main | ${{ steps.ahead.outputs.count }} |
+          | Bumpy baseline                    | \`${{ steps.decide.outputs.baseline }}\` (${{ steps.decide.outputs.baseline_size }} lines) |
+          | Net change %                      | \`${{ steps.decide.outputs.net_pct }}%\` |
+          | Churn %                           | \`${{ steps.decide.outputs.churn_pct }}%\` |
+          | BREAKING CHANGE marker            | \`${{ steps.decide.outputs.breaking }}\` |
+          | Bump level applied                | \`${{ steps.bump.outputs.bump_level }}\` (capped at MINOR — chart MAJOR is pinned to n8n's MAJOR) |
+          | Previous version                  | \`${{ steps.bump.outputs.previous_version }}\` |
+          | New version                       | \`${new_ver}\` |
+
+          The bump commit is already on \`develop\` with \`[skip ci]\`. Validate Chart will run against this PR's merge commit; once green, auto-merge lands it on \`main\` and Release Charts publishes \`n8n-${new_ver}\` to \`gh-pages\`.
+
+          **Optional, before merge**: replace the \`<!-- TODO -->\` block at the top of \`charts/n8n/RELEASE-NOTES.md\` with the human-readable changelog. The structured \`artifacthub.io/changes\` annotation in \`Chart.yaml\` has already been regenerated from the commit log.
+          EOF
+          )"
+          number=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge
+        if: steps.ahead.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # `gh pr merge --auto` queues the merge to happen as soon as
+          # branch-protection requirements are satisfied (status checks +
+          # any required review). Use --merge (preserves develop history)
+          # rather than --squash, matching the release-process docs.
+          gh pr merge "${{ steps.pr.outputs.number }}" --auto --merge \
+            || echo "::warning::Could not enable auto-merge (likely because the repo doesn't have it enabled or the PR is already merged). Enable in Settings → General → 'Allow auto-merge'."

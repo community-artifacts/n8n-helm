@@ -1,0 +1,35 @@
+# Scenario 11: NetworkPolicy enabled (fix K).
+# Verifies one NetworkPolicy is rendered per active role (main + worker +
+# webhook because queue mode is on), with egress to in-cluster Postgres,
+# Redis, and the configured external webhook target.
+
+db:
+  type: postgresdb
+postgresql:
+  enabled: true
+redis:
+  enabled: true
+
+worker:
+  mode: queue
+webhook:
+  mode: queue
+
+networkPolicy:
+  enabled: true
+  ingressFromSameNamespace: true
+  ingressNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  ingressPodSelector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+  additionalEgressRules:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
