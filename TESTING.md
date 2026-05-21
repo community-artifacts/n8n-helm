@@ -12,12 +12,14 @@ enforces on every push / PR.
 > [version-bump workflow](.github/workflows/version-bump.yml) which
 > computes the next chart version from the conventional-commit log,
 > updates `Chart.yaml`, regenerates `artifacthub.io/changes`, and inserts
-> a `RELEASE-NOTES.md` stub on `develop`. Both `develop` and `main` are
-> branch-protected: **direct pushes are blocked for humans**. The only
-> automated exception is the version-bump bot's push back to `develop`,
-> allowed via the `github-actions[bot]` bypass in develop's protection
-> rule. See [CONTRIBUTING.md](CONTRIBUTING.md#branch-strategy) for the
-> full picture and the exact branch-protection settings.
+> a `RELEASE-NOTES.md` stub on `develop`. `main` is hard-protected (PR
+> required, status checks, linear history, no force push, no deletion).
+> `develop` is soft-protected (status checks + no force push + no
+> deletion; no PR-required gate — required so the bump workflows can
+> push, since Free org plans don't honour any github-actions[bot]
+> bypass). "All human work goes through a PR" on develop is a social
+> convention. See [CONTRIBUTING.md](CONTRIBUTING.md#branch-strategy) for
+> the full picture and the exact branch-protection settings.
 
 ---
 
