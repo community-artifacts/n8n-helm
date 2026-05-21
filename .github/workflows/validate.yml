@@ -1,8 +1,16 @@
 name: Validate Chart
 
 # Validation pipeline. Runs on:
-#   - push to `develop` or any `dev/**` / `feat/**` / `hotfix/**` topic branch
-#   - PR targeting `develop` or `main`
+#   - push to `develop` itself (safety net for direct-push bypass cases;
+#     the bot's release commits carry `[skip ci]` and are ignored)
+#   - PR opened / synced / reopened targeting `develop` or `main`
+#     (covers topic branches: a push to `dev/<topic>` only triggers CI
+#      once a PR into `develop` is open, via the `synchronize` event)
+#   - manual `workflow_dispatch`
+#
+# Topic-branch pushes intentionally do NOT trigger CI on their own —
+# pre-PR commits run locally; CI engages the moment a PR is opened, so
+# runner-minutes are spent on work that's actually up for review.
 #
 # Never runs on `main` itself — `main` is reached only via merged PRs from
 # `develop` and triggers the Release Charts workflow instead. See
@@ -12,9 +20,6 @@ on:
   push:
     branches:
       - develop
-      - 'dev/**'
-      - 'feat/**'
-      - 'hotfix/**'
   pull_request:
     branches:
       - develop
