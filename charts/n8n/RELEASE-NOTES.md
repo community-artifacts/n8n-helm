@@ -4,6 +4,10 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
+## 2.4.1 (unreleased)
+
+<!-- TODO: replace this stub with the real changelog before merging the PR to main. Bullet style follows the existing entries (Added / Changed / Fixed / Removed). -->
+
 ## 2.4.0
 
 Chart hardening sweep + influence-chart review. All changes are additive — no values keys removed, no rendered-output regressions for existing installs, no `appVersion` bump (still n8n `2.21.4`). Existing release upgrades pick up bugfixes + new opt-in features without further config.
