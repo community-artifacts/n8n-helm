@@ -241,7 +241,8 @@ minikube and leaves PVCs Pending on a multi-node cluster.
 |---------|--------------|---------|
 | `.github/workflows/validate.yml`         | push to `develop` / `dev/**`; PR targeting `develop` / `main`         | Lint, schema check, unit tests, scenario render, kubeconform, minikube install |
 | `.github/workflows/version-bump.yml`     | PR `opened`/`synchronize`/`reopened` targeting `main` from `develop` / `dev/**`, **unless** the PR has the `bot/release` label | Auto-bump `Chart.yaml#version`, regenerate `artifacthub.io/changes`, insert RELEASE-NOTES stub on the PR head |
-| `.github/workflows/scheduled-release.yml`| `cron: '0 2 * * *'` (02:00 UTC daily) + `workflow_dispatch` | If `develop` ahead of `main`: bump (>4 commits → MINOR, else PATCH), open release PR labelled `bot/release`, enable auto-merge |
+| `.github/workflows/scheduled-release.yml`| `cron: '0 2 * * *'` (02:00 UTC daily) + `workflow_dispatch`           | If `develop` ahead of `main`: run [Bumpy](improvements/bumpy.md) via `scripts/bumpy_decide.sh`, bump accordingly (MAJOR capped at MINOR), open release PR labelled `bot/release`, enable auto-merge |
+| `.github/workflows/hotfix-release.yml`   | push to `develop` whose tip commit subject matches a hotfix marker     | Same as scheduled-release but fired immediately; opens PR titled `Hotfix X.Y.Z` with `bot/release` + `hotfix` labels |
 | `.github/workflows/release.yml`          | push to `main` (i.e., merged PR from `develop`); `workflow_dispatch`  | Package chart, sign, publish to `gh-pages`, create GitHub Release |
 
 Releasing is fully automatic from `main` — no manual `helm package` or

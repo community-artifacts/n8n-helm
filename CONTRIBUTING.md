@@ -111,16 +111,23 @@ Releases are fully automated; the maintainer's only manual touchpoint is the cha
 
 [`.github/workflows/scheduled-release.yml`](.github/workflows/scheduled-release.yml) runs at `02:00 UTC` daily. It:
 
-1. Counts commits on `develop` ahead of `main`.
-   - `0` → exits, no PR.
-   - `1..4` → PATCH bump.
-   - `≥ 5` → MINOR bump.
-2. Calls `./scripts/bump_chart_version.sh --level <patch|minor>` to bump `Chart.yaml`, regenerate `artifacthub.io/changes`, and insert the `RELEASE-NOTES.md` stub.
-3. Commits the bump on `develop` with `[skip ci]`.
-4. Opens (or re-uses) the PR `develop` → `main`, labels it `bot/release`, and enables auto-merge with the **merge commit** strategy (preserving `develop`'s history).
-5. Validate Chart runs on the PR. When it goes green and any required reviews are in place, auto-merge lands the PR on `main`, which triggers Release Charts to package, sign, and publish to `gh-pages`.
+1. Skips if `develop` has no commits ahead of `main`.
+2. Runs [`scripts/bumpy_decide.sh`](scripts/bumpy_decide.sh), which implements the **Bumpy** quantity-based SemVer strategy from [`improvements/bumpy.md`](improvements/bumpy.md). The script measures added / removed lines under `charts/n8n/` between the last `n8n-X.0.0` baseline and `HEAD`, computes net change% and churn%, and picks:
+   - **PATCH** — net < 5%, or refactor case (churn > 10% AND net < 5%).
+   - **MINOR** — net 5–15%, or a `BREAKING CHANGE:` marker is present (raised from a raw MAJOR), or net ≥ 15% (which would be MAJOR but is **capped at MINOR** here — chart MAJOR is pinned to n8n's MAJOR; see "Branch strategy" above).
+   - Generated artifacts (`__snapshot__/`, `Chart.lock`, vendored `charts/`) are excluded from line counts.
+3. Calls `./scripts/bump_chart_version.sh --level <patch|minor>` to bump `Chart.yaml`, regenerate `artifacthub.io/changes`, and insert the `RELEASE-NOTES.md` stub.
+4. Commits the bump on `develop` with `[skip ci]`.
+5. Opens (or re-uses) the PR `develop` → `main`, labels it `bot/release`, and enables auto-merge with the **merge commit** strategy (preserving `develop`'s history).
+6. Validate Chart runs on the PR. When it goes green and any required reviews are in place, auto-merge lands the PR on `main`, which triggers Release Charts to package, sign, and publish to `gh-pages`.
 
 You can replace the `<!-- TODO -->` marker in `RELEASE-NOTES.md` with prose changelog any time before auto-merge fires. The per-PR `version-bump.yml` workflow recognizes the `bot/release` label and stays out of the way (otherwise it would double-bump).
+
+### Hotfix — immediate release on `hotfix:` commits
+
+[`.github/workflows/hotfix-release.yml`](.github/workflows/hotfix-release.yml) triggers on every push to `develop`. If the tip commit subject matches a hotfix marker — `hotfix:`, `hotfix(<scope>):`, `fix!:` with `hotfix` in the body, or a literal `[HOTFIX]` tag — the same Bumpy + bump + PR + auto-merge plumbing runs immediately instead of waiting for 02:00 UTC. The opened PR is titled `Hotfix X.Y.Z` and carries both the `bot/release` and `hotfix` labels (the latter for human visibility — set up branch-protection required reviews on `main` if you want a human signoff on hotfixes).
+
+Non-hotfix pushes to `develop` are ignored by this workflow (Bumpy still runs nightly via the cron path).
 
 ### Manual — for ad-hoc / urgent releases
 
