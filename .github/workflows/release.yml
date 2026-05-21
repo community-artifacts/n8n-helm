@@ -1,5 +1,9 @@
 name: Release Charts
 
+# Triggers ONLY on push to main (or manual). main is reached exclusively via
+# PRs from `develop`, and develop in turn only reaches main after the
+# Validate Chart workflow on develop passes. Direct pushes to main outside
+# of merged PRs are blocked by branch protection — see CONTRIBUTING.md.
 on:
   push:
     branches:

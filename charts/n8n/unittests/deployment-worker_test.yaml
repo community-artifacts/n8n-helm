@@ -1951,11 +1951,18 @@ tests:
             done
         template: deployment-worker.yaml
 
-  - it: should use startupProbe to wait n8n process ready
+  - it: should use httpGet /healthz startupProbe so a wedged worker fails startup rather than passing ps-aux and crashlooping on liveness
     asserts:
       - equal:
-          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.exec.command
-          value: ["/bin/sh", "-c", "ps aux | grep '[n]8n'"]
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.httpGet.path
+          value: /healthz
+        template: deployment-worker.yaml
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.httpGet.port
+          value: http
+        template: deployment-worker.yaml
+      - notExists:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.exec
         template: deployment-worker.yaml
       - equal:
           path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.initialDelaySeconds

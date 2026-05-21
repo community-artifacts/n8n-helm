@@ -630,12 +630,51 @@
       "title": "encryptionKey",
       "type": "string"
     },
+    "extraManifests": {
+      "default": [],
+      "description": "Arbitrary additional Kubernetes manifests rendered into the release; each item is a full YAML mapping. No Helm templating is applied.",
+      "required": [],
+      "title": "extraManifests",
+      "type": "array"
+    },
+    "networkPolicy": {
+      "additionalProperties": true,
+      "description": "NetworkPolicy configuration for n8n pods.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "required": [],
+          "title": "enabled",
+          "type": "boolean"
+        }
+      },
+      "required": ["enabled"],
+      "title": "networkPolicy",
+      "type": "object"
+    },
+    "extraTemplateManifests": {
+      "default": [],
+      "description": "Same as extraManifests but each entry is a multi-line YAML string passed through `tpl`.",
+      "required": [],
+      "title": "extraTemplateManifests",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "existingEncryptionKeySecret": {
       "default": "",
       "description": "The name of an existing secret with encryption key. The secret must contain a key with the name N8N_ENCRYPTION_KEY.",
       "required": [],
       "title": "existingEncryptionKeySecret",
       "type": "string"
+    },
+    "requireExplicitEncryptionKey": {
+      "default": false,
+      "description": "STRONGLY RECOMMENDED FOR PRODUCTION/GITOPS. Fail the template under GitOps / `helm template` renders when no encryption key is configured, instead of silently regenerating it on every reconcile.",
+      "required": [],
+      "title": "requireExplicitEncryptionKey",
+      "type": "boolean"
     },
     "externalPostgresql": {
       "additionalProperties": false,
@@ -1426,6 +1465,14 @@
           "minimum": 0,
           "type": "integer"
         },
+        "terminationGracePeriodSeconds": {
+          "default": 60,
+          "description": "Pod-level terminationGracePeriodSeconds for the main role. Must be greater than gracefulShutdownTimeout (N8N_GRACEFUL_SHUTDOWN_TIMEOUT).",
+          "required": [],
+          "title": "terminationGracePeriodSeconds",
+          "minimum": 0,
+          "type": "integer"
+        },
         "editorBaseUrl": {
           "default": "",
           "description": "Editor based URL. If it's not defined and ingress definition exists, ingress host will be used.",
@@ -1630,6 +1677,13 @@
             "httpGet"
           ],
           "title": "readinessProbe",
+          "type": "object"
+        },
+        "startupProbe": {
+          "additionalProperties": true,
+          "description": "Startup probe for the main pod.",
+          "required": [],
+          "title": "startupProbe",
           "type": "object"
         },
         "forceToUseStatefulset": {
@@ -2384,6 +2438,14 @@
           "type": "integer",
           "minimum": 1
         },
+        "terminationGracePeriodSeconds": {
+          "default": 60,
+          "description": "Pod-level terminationGracePeriodSeconds for webhook pods.",
+          "required": [],
+          "title": "terminationGracePeriodSeconds",
+          "minimum": 0,
+          "type": "integer"
+        },
         "mode": {
           "default": "regular",
           "description": "Use `regular` to use main node as webhook node, or use `queue` to have webhook nodes",
@@ -2412,6 +2474,14 @@
               "required": [],
               "title": "enabled",
               "type": "boolean"
+            },
+            "terminationGracePeriodSeconds": {
+              "default": 60,
+              "description": "Pod-level terminationGracePeriodSeconds for the MCP webhook pod.",
+              "required": [],
+              "title": "terminationGracePeriodSeconds",
+              "minimum": 0,
+              "type": "integer"
             },
             "resources": {
               "additionalProperties": true,
@@ -3713,6 +3783,14 @@
           "title": "concurrency",
           "type": "integer",
           "minimum": 1
+        },
+        "terminationGracePeriodSeconds": {
+          "default": 90,
+          "description": "Pod-level terminationGracePeriodSeconds for worker pods. Should be greater than gracefulShutdownTimeout to give in-flight workflows room to finish or hand off.",
+          "required": [],
+          "title": "terminationGracePeriodSeconds",
+          "minimum": 0,
+          "type": "integer"
         },
         "count": {
           "default": 2,
@@ -5949,6 +6027,10 @@
     "workflowHistory",
     "encryptionKey",
     "existingEncryptionKeySecret",
+    "requireExplicitEncryptionKey",
+    "extraManifests",
+    "extraTemplateManifests",
+    "networkPolicy",
     "timezone",
     "defaultLocale",
     "gracefulShutdownTimeout",

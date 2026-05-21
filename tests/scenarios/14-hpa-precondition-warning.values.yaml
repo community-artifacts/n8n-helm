@@ -1,0 +1,11 @@
+# Scenario 14: NOTES.txt precondition warnings (fix D).
+# worker.autoscaling.enabled=true WITHOUT the prerequisites (sqlite mode,
+# regular worker.mode) — should NOT render a worker HPA, AND should
+# produce a `!!! worker.autoscaling.enabled is true but the worker HPA
+# was NOT rendered` warning in NOTES.
+
+worker:
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3

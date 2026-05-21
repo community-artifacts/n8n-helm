@@ -1221,6 +1221,49 @@ tests:
               name: n8n-task-runners-configmap
         template: statefulset.yaml
 
+  - it: should honor taskRunners.external image/args/extraEnvVars overrides on the StatefulSet (regression for the runner-sidecar drift fixed in 2.4.0)
+    set:
+      taskRunners:
+        mode: external
+        external:
+          image:
+            repository: n8nio/runners
+            tag: pinned-test
+            pullPolicy: Always
+          args:
+            - javascript
+            - python
+          extraEnvVars:
+            N8N_RUNNERS_STDLIB_ALLOW: "*"
+            CUSTOM_FOO: bar
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].image
+          value: n8nio/runners:pinned-test
+        template: statefulset.yaml
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].imagePullPolicy
+          value: Always
+        template: statefulset.yaml
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].args
+          value:
+            - javascript
+            - python
+        template: statefulset.yaml
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].env
+          content:
+            name: N8N_RUNNERS_STDLIB_ALLOW
+            value: "*"
+        template: statefulset.yaml
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].env
+          content:
+            name: CUSTOM_FOO
+            value: bar
+        template: statefulset.yaml
+
   - it: should add license info command when license.enabled is true and license.activationKey is set
     set:
       license:

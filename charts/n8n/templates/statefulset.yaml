@@ -38,6 +38,9 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.main.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
       serviceAccountName: {{ include "n8n.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -98,6 +101,10 @@ spec:
             - name: {{ .Values.service.name }}
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+          {{- with .Values.main.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           livenessProbe:
             {{- $rootLiveness := .Values.livenessProbe | default dict }}
             {{- $mainLiveness := .Values.main.livenessProbe | default dict }}
@@ -280,72 +287,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- if eq .Values.taskRunners.mode "external" }}
-        - name: {{ template "n8n.taskRunners.name" . }}
-          securityContext:
-            {{- toYaml (default .Values.securityContext .Values.taskRunners.external.securityContext) | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/usr/local/bin/task-runner-launcher"]
-          args: ["javascript"]
-          ports:
-            - name: task-runner
-              containerPort: {{ .Values.taskRunners.external.port }}
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: task-runner
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: task-runner
-          resources:
-            {{- toYaml .Values.taskRunners.external.resources | nindent 12 }}
-          env:
-            - name: N8N_RUNNERS_AUTH_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ template "n8n.taskRunners.fullname" . }}-secret
-                  key: auth-token
-          {{- if .Values.nodes.builtin.enabled }}
-            - name: NODE_FUNCTION_ALLOW_BUILTIN
-              value: {{ if .Values.nodes.builtin.modules }}{{ join "," .Values.nodes.builtin.modules }}{{ else }}"*"{{ end }}
-          {{- end }}
-          {{- if .Values.nodes.external.allowAll }}
-            - name: NODE_FUNCTION_ALLOW_EXTERNAL
-              value: "*"
-          {{- else if .Values.nodes.external.packages }}
-            - name: NODE_FUNCTION_ALLOW_EXTERNAL
-              value: {{ include "n8n.packageNames" .Values.nodes.external.packages | quote }}
-          {{- end }}
-          {{- if .Values.nodes.external.reinstallMissingPackages }}
-            - name: N8N_REINSTALL_MISSING_PACKAGES
-              value: "true"
-          {{- end }}
-          envFrom:
-            - configMapRef:
-                name: {{ template "n8n.taskRunners.fullname" . }}-configmap
-          volumeMounts:
-            - name: {{ default "node-modules" .Values.main.persistence.volumeName }}
-              mountPath: {{ .Values.main.persistence.mountPath }}
-              {{- if .Values.main.persistence.subPath }}
-              subPath: {{ .Values.main.persistence.subPath }}
-              {{- end }}
-              readOnly: false
-          {{- if .Values.nodes.external.packages }}
-            - name: community-node-modules
-              mountPath: "/home/node/.n8n/nodes"
-              readOnly: false
-          {{- end }}
-          {{- if .Values.taskRunners.external.launcherConfig }}
-            - name: task-runners-launcher-config
-              mountPath: /etc/n8n-task-runners.json
-              subPath: n8n-task-runners.json
-              readOnly: true
-          {{- end }}
-          {{- with .Values.taskRunners.external.extraVolumeMounts }}
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+        {{- include "n8n.taskRunnerSidecar" (dict "ctx" $ "role" "main") | nindent 8 }}
       {{- end }}
       {{- with .Values.main.extraContainers }}
         {{- toYaml . | nindent 8 }}

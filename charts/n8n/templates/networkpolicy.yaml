@@ -1,0 +1,96 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- /*
+NetworkPolicy for n8n pods.
+
+Defaults to a permissive-egress / restricted-ingress posture:
+- Ingress: from any pod in the same namespace plus any pods matching
+  ingress-controller-style labels (`ingressNamespaceSelector` / `ingressPodSelector`).
+- Egress: full DNS lookup, in-cluster Postgres / Redis / S3 targets,
+  plus an opt-in `additionalEgressRules` list for arbitrary webhook
+  destinations.
+
+n8n workflows commonly hit arbitrary external endpoints by design, so the
+chart does not lock down egress beyond DNS + the in-cluster dependencies
+unless the operator extends `additionalEgressRules`. Set the policy to
+deny-all by emptying `egressRules` and supplying only what you want.
+*/}}
+{{- $allMain    := dict "main" true }}
+{{- $allWorker  := dict "worker" true }}
+{{- $allWebhook := dict "webhook" true }}
+{{- $roles := list "main" }}
+{{- if or (eq .Values.worker.mode "queue") (eq .Values.webhook.mode "queue") }}
+  {{- $roles = append $roles "worker" }}
+{{- end }}
+{{- if eq .Values.webhook.mode "queue" }}
+  {{- $roles = append $roles "webhook" }}
+{{- end }}
+{{- range $role := $roles }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "n8n.fullname" $ }}-{{ $role }}
+  labels:
+    {{- include (printf "n8n.%s.labels" $role) $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include (printf "n8n.%s.selectorLabels" $role) $ | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if $.Values.networkPolicy.ingressFromSameNamespace }}
+    - from:
+        - podSelector: {}
+    {{- end }}
+    {{- with $.Values.networkPolicy.ingressNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- with $.Values.networkPolicy.ingressPodSelector }}
+          podSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+    {{- end }}
+    {{- with $.Values.networkPolicy.additionalIngressRules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  egress:
+    # Always allow DNS — almost every downstream rule depends on it.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- if eq $.Values.db.type "postgresdb" }}
+    # In-cluster Postgres (bundled or external via clusterIP).
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ if $.Values.postgresql.enabled }}{{ $.Values.postgresql.service.port }}{{ else }}{{ $.Values.externalPostgresql.port }}{{ end }}
+    {{- end }}
+    {{- if or (eq $.Values.worker.mode "queue") (eq $.Values.webhook.mode "queue") }}
+    # In-cluster Redis / Valkey for the Bull queue.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ if $.Values.redis.enabled }}{{ $.Values.redis.service.port }}{{ else }}{{ $.Values.externalRedis.port }}{{ end }}
+    {{- end }}
+    {{- if has "s3" $.Values.binaryData.availableModes }}
+    # S3 binary storage. Bundled MinIO uses port 9000; external S3 uses 443.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ if $.Values.minio.enabled }}9000{{ else }}443{{ end }}
+    {{- end }}
+    {{- with $.Values.networkPolicy.additionalEgressRules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

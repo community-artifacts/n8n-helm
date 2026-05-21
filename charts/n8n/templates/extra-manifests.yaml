@@ -1,0 +1,23 @@
+{{/*
+Escape hatch: render arbitrary user-supplied Kubernetes resources alongside
+the chart's own resources.
+
+  extraManifests          List of YAML mappings (full Kubernetes objects).
+                          Emitted as-is, no Helm templating.
+  extraTemplateManifests  List of multi-line YAML strings. Each entry is
+                          `tpl`-rendered against the chart's context so
+                          `{{ include "n8n.fullname" . }}`, value lookups,
+                          and conditionals resolve at install time.
+
+Typical use cases: NetworkPolicies more specific than what `networkPolicy.*`
+covers, CronJobs that operate on n8n data, supplementary ConfigMaps consumed
+via `extraSecretNamesForEnvFrom`, ExternalSecret resources from ESO, etc.
+*/}}
+{{- range $i, $manifest := .Values.extraManifests }}
+---
+{{ toYaml $manifest }}
+{{- end }}
+{{- range $i, $manifest := .Values.extraTemplateManifests }}
+---
+{{ tpl $manifest $ }}
+{{- end }}

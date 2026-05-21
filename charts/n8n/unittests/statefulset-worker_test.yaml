@@ -1278,6 +1278,55 @@ tests:
               name: n8n-task-runners-configmap
         template: statefulset-worker.yaml
 
+  - it: should honor taskRunners.external image/args/extraEnvVars overrides on the worker StatefulSet (regression for the runner-sidecar drift fixed in 2.4.0)
+    set:
+      worker:
+        mode: queue
+        persistence:
+          enabled: true
+      taskRunners:
+        mode: external
+        external:
+          image:
+            repository: n8nio/runners
+            tag: pinned-test
+            pullPolicy: Always
+          args:
+            - javascript
+            - python
+          extraEnvVars:
+            CUSTOM_RUNNER_FOO: worker-bar
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].image
+          value: n8nio/runners:pinned-test
+        template: statefulset-worker.yaml
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].imagePullPolicy
+          value: Always
+        template: statefulset-worker.yaml
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].args
+          value:
+            - javascript
+            - python
+        template: statefulset-worker.yaml
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].env
+          content:
+            name: CUSTOM_RUNNER_FOO
+            value: worker-bar
+        template: statefulset-worker.yaml
+      - contains:
+          path: spec.template.spec.containers[?(@.name == "n8n-task-runners")].env
+          content:
+            name: N8N_RUNNERS_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: n8n-task-runners-secret
+                key: worker-auth-token
+        template: statefulset-worker.yaml
+
   - it: should use license configmap and secret when license.enabled is true
     set:
       license:
@@ -1842,11 +1891,18 @@ tests:
             done
         template: statefulset-worker.yaml
 
-  - it: should use startupProbe to wait n8n process ready
+  - it: should use httpGet /healthz startupProbe so a wedged StatefulSet worker fails startup rather than passing ps-aux and crashlooping on liveness
     asserts:
       - equal:
-          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.exec.command
-          value: ["/bin/sh", "-c", "ps aux | grep '[n]8n'"]
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.httpGet.path
+          value: /healthz
+        template: statefulset-worker.yaml
+      - equal:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.httpGet.port
+          value: http
+        template: statefulset-worker.yaml
+      - notExists:
+          path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.exec
         template: statefulset-worker.yaml
       - equal:
           path: spec.template.spec.containers[?(@.name == "n8n-worker")].startupProbe.initialDelaySeconds

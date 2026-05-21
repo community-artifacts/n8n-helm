@@ -1,0 +1,16 @@
+# Scenario 03: External PostgreSQL via existingSecret.
+# Verifies the "production-grade" path: chart references an out-of-band secret
+# (no inline password baked into rendered manifests). Exercises the secret-key
+# fallback when no chart-managed credentials Secret is created.
+
+db:
+  type: postgresdb
+
+postgresql:
+  enabled: false
+
+externalPostgresql:
+  host: pg.example.com
+  username: n8nuser
+  database: n8n
+  existingSecret: my-existing-pg-secret  # must contain `postgres-password`
