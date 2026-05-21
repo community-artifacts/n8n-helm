@@ -4,9 +4,13 @@ Chart versions follow [Semantic Versioning](https://semver.org/) independently o
 
 For every n8n binary bump (`appVersion`), the maintainer reads the n8n release notes between the previous and new `appVersion` and applies any hosting-relevant changes to the chart (new env vars, deprecations, port or endpoint changes, default-value adjustments). The corresponding entry below summarizes what was carried over.
 
-## 2.4.1 (unreleased)
+## 2.4.1
 
-<!-- TODO: replace this stub with the real changelog before merging the PR to main. Bullet style follows the existing entries (Added / Changed / Fixed / Removed). -->
+Single-fix hotfix on top of 2.4.0. No values keys touched, no rendered-output change, no `appVersion` bump — only the chart's Artifact Hub metadata.
+
+### Fixed
+
+- **Artifact Hub rejected the 2.4.0 `artifacthub.io/changes` annotation** with `invalid changes annotation. Please use quotes on strings that include any of the following characters: {}:[],&*#?|-<>=!%@`. The 2.4.0 block listed 11 `description:` values containing unquoted YAML-special characters (`{`, `[`, `:`, `|`, `-`, `!`, `=`, `<`, `>`), which artifact-hub-tooling's parser refused. Each `description:` value is now a double-quoted scalar; the three entries with internal `"` (the `["javascript"]`, `["ps aux | grep '[n]8n'"]`, and `"I set ..."` cases) have those escaped as `\"`. Pure metadata fix — chart templates and rendered output are byte-identical to 2.4.0. **Note**: this fixes the annotation rendered for 2.4.1 onward; the 2.4.0 entry in `gh-pages/index.yaml` was snapshotted at release time and will continue to error on Artifact Hub's per-version enrichment for that one version.
 
 ## 2.4.0
 
