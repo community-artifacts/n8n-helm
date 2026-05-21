@@ -32,16 +32,18 @@ permissions:
 
 jobs:
   bump:
-    # Only auto-bump on PRs from develop or dev/** (i.e., release PRs).
+    # Only auto-bump on PRs from develop or dev/** / feat/** / hotfix/**
+    # (i.e., release PRs into main).
     # Skip PRs already labelled `bot/release` — those were opened by
-    # `scheduled-release.yml`, which has already done its own count-based
-    # bump and committed it on develop. Running this workflow on top
-    # would be a no-op thanks to the no-downgrade guard, but skipping
-    # entirely is cleaner: no second commit, no extra Validate Chart
-    # cycle.
+    # `scheduled-release.yml`, which has already done its own bump and
+    # committed it on develop. Running this workflow on top would be a
+    # no-op thanks to the no-downgrade guard, but skipping entirely is
+    # cleaner: no second commit, no extra Validate Chart cycle.
     if: |
       (github.event.pull_request.head.ref == 'develop' ||
-       startsWith(github.event.pull_request.head.ref, 'dev/'))
+       startsWith(github.event.pull_request.head.ref, 'dev/') ||
+       startsWith(github.event.pull_request.head.ref, 'feat/') ||
+       startsWith(github.event.pull_request.head.ref, 'hotfix/'))
       && !contains(github.event.pull_request.labels.*.name, 'bot/release')
     runs-on: ubuntu-latest
     steps:

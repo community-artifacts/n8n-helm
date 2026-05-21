@@ -1,7 +1,7 @@
 name: Validate Chart
 
 # Validation pipeline. Runs on:
-#   - push to `develop` or any `dev/**` topic branch
+#   - push to `develop` or any `dev/**` / `feat/**` / `hotfix/**` topic branch
 #   - PR targeting `develop` or `main`
 #
 # Never runs on `main` itself — `main` is reached only via merged PRs from
@@ -13,6 +13,8 @@ on:
     branches:
       - develop
       - 'dev/**'
+      - 'feat/**'
+      - 'hotfix/**'
   pull_request:
     branches:
       - develop
