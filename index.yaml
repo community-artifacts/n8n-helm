@@ -1,0 +1,602 @@
+apiVersion: v1
+entries:
+  n8n:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: fixed
+          description: "External task-runner sidecar now honours `taskRunners.external.{image,args,extraEnvVars}` overrides in StatefulSet renders (main multi-main and worker). Previously the sidecar in those workloads was hardcoded to `.Values.image.repository:tag` and `args: [\"javascript\"]`, silently ignoring user overrides — extracting the sidecar into a `_helpers.tpl` partial eliminates the drift."
+        - kind: added
+          description: "`requireExplicitEncryptionKey` (default false) — when true, `helm template` / GitOps renders without a live cluster will FAIL the template if neither `encryptionKey` nor `existingEncryptionKeySecret` is set, instead of silently regenerating the key on every reconcile. Encryption-key Secret now also carries `helm.sh/resource-policy: keep` so it survives `helm uninstall`."
+        - kind: added
+          description: "Pod-level `terminationGracePeriodSeconds` per role — `main.terminationGracePeriodSeconds`, `worker.terminationGracePeriodSeconds`, `webhook.terminationGracePeriodSeconds`, `webhook.mcp.terminationGracePeriodSeconds`. Defaults aligned with `gracefulShutdownTimeout` (60-90s) so n8n's graceful-shutdown env var isn't truncated by the kubelet's default 30s grace period."
+        - kind: added
+          description: "`extraManifests` / `extraTemplateManifests` escape hatch at the chart's top level for arbitrary additional Kubernetes resources (NetworkPolicies, CronJobs, ExternalSecret, etc.) without needing a sibling chart."
+        - kind: added
+          description: "`networkPolicy.enabled` (default false) — opt-in NetworkPolicy per active role with sensible egress defaults (DNS + in-cluster Postgres / Redis / S3 derived from the rest of the chart's values) and `additionalIngressRules` / `additionalEgressRules` extension points."
+        - kind: changed
+          description: "Default `startupProbe` for worker / webhook / mcp-webhook is now `httpGet /healthz` instead of `exec [\"ps aux | grep '[n]8n'\"]`. The previous match-on-process probe passed before the pod was actually serving, causing crash-loops on liveness; the HTTP probe matches the existing liveness endpoint and supports a longer `failureThreshold` for cold starts."
+        - kind: fixed
+          description: "Main role now ships a default `startupProbe` (httpGet /healthz, 150s budget). Without it, slow cold starts on real clusters tripped the tight liveness probe (1s timeout, 3 failures) and the kubelet SIGTERMed the pod before n8n bound its HTTP port. Surfaced by live minikube validation of 2.4.0."
+        - kind: changed
+          description: "HPA / PDB precondition combinations that previously silently skipped the resource now emit a `!!!`-prefixed warning in `helm install` NOTES output naming the missing prerequisites — no more \"I set `worker.autoscaling.enabled: true` and nothing happened\"."
+        - kind: fixed
+          description: "Top-level `/LICENSE` aligned to Apache-2.0 (matches `charts/n8n/LICENSE`, Chart.yaml annotation, and README). Previously the repo root carried GPL-3.0 while everything else stated Apache-2.0."
+        - kind: changed
+          description: "Chart README now has a `Bundled subchart details` section naming the actual upstreams behind the `redis`/`postgresql`/`minio` value aliases (Valkey 9, CloudPirates Postgres 18, MinIO) so operators can evaluate the supply chain."
+        - kind: changed
+          description: "`externalPostgresql.password` value now carries a prominent comment warning against the inline pattern (cleartext password ends up in rendered manifests / Helm release history / GitOps diff) and recommending `existingSecret` for production."
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-21T10:50:01.188968235Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: a7fcc511234ae8aa071b3f1586652125b073eddbde4a069f4143b80bd76f7173
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.4.0/n8n-2.4.0.tgz
+    version: 2.4.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: New `taskRunners.external.launcherConfig` value. Setting it to the desired `n8n-task-runners.json` content makes the chart render a labeled ConfigMap and overlay `/etc/n8n-task-runners.json` on the runner sidecar automatically. Removes the boilerplate of pairing a custom ConfigMap with `main.volumes` + `taskRunners.external.extraVolumeMounts`, which was the only previous path to widen the launcher's `env-overrides` allowlist (the `n8nio/runners` image forces `N8N_RUNNERS_STDLIB_ALLOW` / `N8N_RUNNERS_EXTERNAL_ALLOW` to empty in its baked config, so `extraEnvVars` does not help).
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-20T13:58:17.41110227Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: 62b064915653841ba6a1180122f2dfc75ea751d7fdb15837e591b7e6d0dc3fe5
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.3.0/n8n-2.3.0.tgz
+    version: 2.3.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: fixed
+          description: Declare `taskRunners.external.extraVolumeMounts` in values.schema.json. 2.2.5 added the value but forgot the schema entry, so any deploy setting it failed with `additional properties 'extraVolumeMounts' not allowed`.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-20T12:53:05.358634073Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: 817c6a3cd500db36fd1b61c805ede77b87d94b9a711caac78fee11d14f82be79
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.2.6/n8n-2.2.6.tgz
+    version: 2.2.6
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: New `taskRunners.external.extraVolumeMounts` value to attach arbitrary volumes (e.g. a ConfigMap) into the external task-runner sidecar. The primary use case is overlaying `/etc/n8n-task-runners.json` to widen the `env-overrides` allowlist that the `n8nio/runners` image bakes — without this the image silently forces `N8N_RUNNERS_STDLIB_ALLOW` / `N8N_RUNNERS_EXTERNAL_ALLOW` to empty, so python `import json` and other stdlib modules raise `Security violations detected`.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-20T12:35:44.302798449Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: 504919ee20c80e6e0d7a01cc3e69940476939388e909ac3c392e391609fda31f
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.2.5/n8n-2.2.5.tgz
+    version: 2.2.5
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: fixed
+          description: Mount the main/worker persistence PVC at the configured mountPath regardless of `taskRunners.mode`. Previously the volumeMount was gated on `taskRunners.mode == "internal"`, so external-runner deployments provisioned the PVC but never mounted it — sqlite and other n8n state silently lived on the pod's overlay filesystem and were lost on restart.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-20T12:15:15.093433109Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: b105da0cead6234da76c72f4129127d4a2aefd31dfa3d2c6a931607733278084
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.2.4/n8n-2.2.4.tgz
+    version: 2.2.4
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: fixed
+          description: Stop emitting the deprecated `N8N_RUNNERS_ENABLED` environment variable. n8n logs `N8N_RUNNERS_ENABLED -> Remove this environment variable; it is no longer needed.` on startup when it is set; task runners are always enabled on supported n8n versions.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-20T07:58:08.107844319Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: 28e528d6b4fac05fc4f7e75bbd91f05bb70bbd5c66480a2c109924b87bdf06a2
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.2.3/n8n-2.2.3.tgz
+    version: 2.2.3
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: GPG provenance signing — releases now ship a `.tgz.prov` file alongside the chart `.tgz`, so Artifact Hub displays the "Signed" badge and `helm install --verify` works against the published public key.
+        - kind: added
+          description: Public key (`pubkey.gpg`) committed at the repo root for client-side verification.
+        - kind: added
+          description: New `Verifying the Chart` section in the chart README with `helm install --verify` instructions.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-20T00:49:06.975134225Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: 11875c05abe4a83f8e6343abbc87ec47c455c43ce592feda75a85cdc68f9404e
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.2.2/n8n-2.2.2.tgz
+    version: 2.2.2
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Per-version changelog now surfaced on Artifact Hub via the `artifacthub.io/changes` annotation. Future releases will populate it with structured entries.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-19T23:56:29.868030063Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: b5a1890b6c4346440d7111430a8f11ba2d0bc78721d56c83dad31b70094a1f4d
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.2.1/n8n-2.2.1.tgz
+    version: 2.2.1
+  - annotations:
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-19T19:07:15.931148506Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: 79e93b1dee6d18f9643fae50b0c9bd6100e5c4a15faac14a42b99828c2667843
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.2.0/n8n-2.2.0.tgz
+    version: 2.2.0
+  - annotations:
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-19T18:50:10.955240779Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: 885ec7c4168a335db4b668784cb4ea9821755674e204420063aef53ad0d49715
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.1.1/n8n-2.1.1.tgz
+    version: 2.1.1
+  - annotations:
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Chart Source
+          url: https://github.com/community-artifacts/n8n-helm
+        - name: n8n Project
+          url: https://github.com/n8n-io/n8n
+    apiVersion: v2
+    appVersion: 2.21.4
+    created: '2026-05-19T18:37:11.429288847Z'
+    dependencies:
+    - alias: redis
+      condition: redis.enabled
+      name: valkey
+      repository: https://valkey.io/valkey-helm
+      version: 0.9.4
+    - alias: postgresql
+      condition: postgresql.enabled
+      name: postgres
+      repository: oci://registry-1.docker.io/cloudpirates
+      version: 0.19.4
+    - condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for n8n, the fair-code workflow automation platform. Independent, production-oriented distribution maintained by the community-artifacts organisation. Ships additive operational knobs (task-runner controls, queue mode, KEDA/HPA/PDB, S3 binary storage, multi-main, webhook processors, ServiceMonitor).
+    digest: da87c9fb322025e05e08af79440e7c386583dc87476d61271578f3235da0878b
+    home: https://github.com/community-artifacts/n8n-helm
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - n8n
+    - Workflow Automation
+    - Workflow
+    - Automation
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: community-artifacts
+      url: https://github.com/community-artifacts
+    name: n8n
+    sources:
+    - https://github.com/community-artifacts/n8n-helm
+    - https://github.com/n8n-io/n8n
+    type: application
+    urls:
+    - https://github.com/community-artifacts/n8n-helm/releases/download/n8n-2.1.0/n8n-2.1.0.tgz
+    version: 2.1.0
+generated: '2026-05-21T17:10:32.335159022Z'

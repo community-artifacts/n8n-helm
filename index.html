@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>n8n-helm — Production-oriented Helm chart for n8n</title>
+<meta name="description" content="Production-oriented Helm chart for n8n, the fair-code workflow automation platform. Hosted on GitHub Pages by community-artifacts.">
+<link rel="canonical" href="https://community-artifacts.github.io/n8n-helm/">
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #57606a;
+    --link: #0969da;
+    --bg: #ffffff;
+    --code-bg: #f6f8fa;
+    --border: #d0d7de;
+    --max-width: 880px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --link: #4493f8;
+      --bg: #0d1117;
+      --code-bg: #161b22;
+      --border: #30363d;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+  body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { max-width: var(--max-width); margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1 { font-size: 2.2rem; margin: 0.25rem 0 0.5rem; }
+  h2 { font-size: 1.4rem; margin: 2.25rem 0 1rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--border); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--code-bg); padding: 0.15em 0.35em; border-radius: 4px; font-size: 0.9em; }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 6px; overflow-x: auto; }
+  pre code { background: transparent; padding: 0; font-size: 0.875em; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  ul { padding-left: 1.5rem; }
+  li { margin: 0.25rem 0; }
+  .center { text-align: center; }
+  .center img.logo { width: 96px; height: 96px; border-radius: 12px; }
+  .badges { margin: 1rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+  .badges a { display: inline-flex; }
+  .badges img { display: block; }
+  .lead { color: var(--muted); margin: 0.5rem 0 0; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="center">
+    <img class="logo" src="https://avatars1.githubusercontent.com/u/45487711?s=200&amp;v=4" alt="n8n">
+    <h1>n8n-helm</h1>
+    <p class="lead"><strong>Production-oriented Helm chart for <a href="https://n8n.io">n8n</a> — the fair-code workflow automation platform.</strong></p>
+    <p class="badges">
+      <a href="https://github.com/community-artifacts/n8n-helm/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/community-artifacts/n8n-helm?color=blue"></a>
+      <a href="https://github.com/community-artifacts/n8n-helm/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/community-artifacts/n8n-helm?label=chart&amp;color=brightgreen"></a>
+      <a href="https://github.com/n8n-io/n8n/releases"><img alt="App version" src="https://img.shields.io/badge/n8n-2.21.4-ff6d5a"></a>
+      <a href="https://kubernetes.io"><img alt="Kubernetes" src="https://img.shields.io/badge/kubernetes-%E2%89%A51.23-326ce5"></a>
+      <a href="https://artifacthub.io/packages/search?repo=community-artifacts-helm-charts"><img alt="Artifact Hub" src="https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/community-artifacts-helm-charts"></a>
+    </p>
+  </div>
+
+  <hr>
+
+  <h2>Quick start</h2>
+  <pre><code>helm repo add community-artifacts https://community-artifacts.github.io/n8n-helm
+helm repo update
+helm install n8n community-artifacts/n8n</code></pre>
+  <p>Need a <code>values.yaml</code>? See the <a href="https://github.com/community-artifacts/n8n-helm/blob/main/charts/n8n/README.md"><strong>full values reference</strong></a> and the <a href="https://github.com/community-artifacts/n8n-helm/blob/main/charts/n8n/README.md#deployment-with-the-bundled-postgresql-subchart">example overlays</a> in the chart README.</p>
+
+  <h2>What&rsquo;s inside</h2>
+  <p>Operational knobs that the upstream n8n image alone doesn&rsquo;t give you — all opt-in:</p>
+  <ul>
+    <li><strong>Queue mode</strong> with dedicated <code>worker</code>, <code>webhook</code>, and MCP-webhook deployments</li>
+    <li><strong>External task runners</strong> (<code>n8nio/runners</code>) with full image/args/env/resources overrides</li>
+    <li><strong>Multi-main HA</strong> (<code>main.count &gt; 1</code>) for enterprise license holders</li>
+    <li><strong>Autoscaling</strong> — HPA for <code>main</code> and <code>worker</code>, KEDA-aware</li>
+    <li><strong>PodDisruptionBudgets</strong> per role (<code>main.pdb</code>, <code>worker.pdb</code>, <code>webhook.pdb</code>)</li>
+    <li><strong>S3 binary storage</strong> (<code>binaryData.mode=s3</code>) with optional bundled MinIO</li>
+    <li><strong>Postgres TLS</strong> with inline base64 certs or <code>existingSecret</code> references</li>
+    <li><strong>Observability</strong> — <code>ServiceMonitor</code> for <code>main</code>, <code>PodMonitor</code> for workers in queue + Postgres mode</li>
+    <li><strong>Bundled subcharts</strong> — opt-in <a href="https://artifacthub.io/packages/helm/cloudpirates-postgres/postgres"><code>cloudpirates/postgres</code></a> (PostgreSQL 18) and <a href="https://github.com/valkey-io/valkey-helm"><code>valkey/valkey</code></a> (Redis-wire-compatible 9.x), with the option to bring your own via <code>externalPostgresql</code> / <code>externalRedis</code></li>
+    <li><strong><code>values.schema.json</code></strong> shipped with the chart, so <code>helm install --set foo=bar</code> is validated client-side</li>
+  </ul>
+
+  <h2>Versions</h2>
+  <p>The chart&rsquo;s MAJOR component tracks the n8n binary&rsquo;s MAJOR (<code>2.x</code> ships n8n <code>2.x</code>); chart-side MINOR / PATCH bumps live independently. Full changelog in <a href="https://github.com/community-artifacts/n8n-helm/blob/main/charts/n8n/RELEASE-NOTES.md"><code>RELEASE-NOTES.md</code></a>.</p>
+  <table>
+    <thead>
+      <tr><th>Chart</th><th>n8n (<code>appVersion</code>)</th><th>Highlights</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>2.4.0</code></td><td><code>2.21.4</code></td><td>Hardening sweep: <code>networkPolicy</code>, <code>requireExplicitEncryptionKey</code>, per-role <code>terminationGracePeriodSeconds</code>, <code>extraManifests</code>/<code>extraTemplateManifests</code>, task-runner sidecar drift fix, HTTP <code>startupProbe</code> defaults</td></tr>
+      <tr><td><code>2.3.0</code></td><td><code>2.21.4</code></td><td><code>taskRunners.external.launcherConfig</code></td></tr>
+      <tr><td><code>2.2.0</code></td><td><code>2.21.4</code></td><td>Per-sidecar <code>securityContext</code> on the external task-runner</td></tr>
+      <tr><td><code>2.1.0</code></td><td><code>2.21.4</code></td><td>Replaced Bitnami subcharts with CloudPirates Postgres + Valkey (values-key breaking within 2.x)</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Only minor-track entries (<code>X.Y.0</code>) are listed; patches within each minor are covered in <a href="https://github.com/community-artifacts/n8n-helm/blob/main/charts/n8n/RELEASE-NOTES.md"><code>RELEASE-NOTES.md</code></a>.</p>
+  <pre><code># pin a specific version
+helm install n8n community-artifacts/n8n --version 2.4.0</code></pre>
+
+  <h2>Source, issues, contributing</h2>
+  <ul>
+    <li><strong>Chart source</strong>: <a href="https://github.com/community-artifacts/n8n-helm">https://github.com/community-artifacts/n8n-helm</a></li>
+    <li><strong>Issue tracker</strong>: <a href="https://github.com/community-artifacts/n8n-helm/issues">https://github.com/community-artifacts/n8n-helm/issues</a></li>
+    <li><strong>Contributing guide</strong>: <a href="https://github.com/community-artifacts/n8n-helm/blob/main/CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a></li>
+    <li><strong>n8n project</strong>: <a href="https://github.com/n8n-io/n8n">https://github.com/n8n-io/n8n</a></li>
+  </ul>
+</main>
+</body>
+</html>
